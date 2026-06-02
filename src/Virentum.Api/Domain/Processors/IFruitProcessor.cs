@@ -1,0 +1,25 @@
+using Virentum.Api.Domain.Enums;
+using Virentum.Api.Domain.Models;
+
+namespace Virentum.Api.Domain.Processors;
+
+/// <summary>
+/// Strategy contract for turning a vendor-neutral <see cref="VisionPrediction"/>
+/// into a fruit-specific commercial verdict.
+///
+/// Every fruit owns exactly one implementation of this interface, keeping its
+/// ripeness thresholds, cold-chain advice and discount policy fully isolated.
+/// Introducing a new fruit (e.g. Apple, Mango) means adding a new class that
+/// implements this interface — no existing controller, service or factory code
+/// is touched (Open/Closed Principle).
+/// </summary>
+public interface IFruitProcessor
+{
+    /// <summary>The single fruit this processor is responsible for.</summary>
+    SupportedFruit Fruit { get; }
+
+    /// <summary>
+    /// Evaluates a vision prediction and returns the merchandising assessment.
+    /// </summary>
+    RipenessAssessment Assess(VisionPrediction prediction);
+}

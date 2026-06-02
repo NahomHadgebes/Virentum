@@ -1,0 +1,17 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_size = 4
+# Enforce explicit accessibility and modern C# conventions
+dotnet_style_qualification_for_field = false:suggestion
+csharp_prefer_braces = true:suggestion
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+[*.{json,csproj,props,targets}]
+indent_size = 2
