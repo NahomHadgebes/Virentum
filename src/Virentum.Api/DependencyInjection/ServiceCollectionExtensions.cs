@@ -48,18 +48,73 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddVirentumPersistence(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        var connectionString = configuration.GetConnectionString("Default")
-            ?? throw new InvalidOperationException(
-                "Connection string 'Default' is not configured. Set ConnectionStrings__Default.");
+        if (environment.IsDevelopment())
+        {
+            // Zero-dependency local dev: an in-memory store, seeded at startup.
+            // No database server (or connection string) required to press F5.
+            services.AddDbContext<VirentumDbContext>(options =>
+                options.UseInMemoryDatabase("virentum-dev"));
+        }
+        else
+        {
+            // Production (e.g. Railway): PostgreSQL.
+            var connectionString = ResolvePostgresConnectionString(configuration)
+                ?? throw new InvalidOperationException(
+                    "PostgreSQL connection string is not configured. Set " +
+                    "ConnectionStrings__Postgres or provide DATABASE_URL.");
 
-        services.AddDbContext<VirentumDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            services.AddDbContext<VirentumDbContext>(options =>
+                options.UseNpgsql(connectionString));
+        }
 
         services.AddScoped<IInspectionRepository, InspectionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         return services;
+    }
+
+    /// <summary>
+    /// Resolves the PostgreSQL connection string, preferring an explicit
+    /// <c>ConnectionStrings:Postgres</c> and falling back to Railway's
+    /// <c>DATABASE_URL</c> (a single <c>postgres://</c> URL), which is converted
+    /// into the Npgsql key/value format.
+    /// </summary>
+    private static string? ResolvePostgresConnectionString(IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("Postgres");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            return connectionString;
+        }
+
+        var databaseUrl = configuration["DATABASE_URL"]
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        return string.IsNullOrWhiteSpace(databaseUrl)
+            ? null
+            : ConvertDatabaseUrl(databaseUrl);
+    }
+
+    private static string ConvertDatabaseUrl(string databaseUrl)
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = Uri.UnescapeDataString(userInfo[0]),
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            // Railway requires TLS to its managed Postgres.
+            SslMode = Npgsql.SslMode.Require,
+            TrustServerCertificate = true,
+        };
+
+        return builder.ConnectionString;
     }
 
     public static IServiceCollection AddVirentumDomainServices(this IServiceCollection services)

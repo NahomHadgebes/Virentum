@@ -76,10 +76,9 @@ src/Virentum.Api
 
 ## Running locally
 
-Prerequisites: .NET 8 SDK and a SQL Server instance (LocalDB, Express, or full —
-anything you can reach from SSMS). The dev connection string uses Windows
-authentication against `localhost`; adjust it in `appsettings.Development.json`
-to match your instance (see below).
+Prerequisites: just the **.NET 8 SDK**. Local development uses an **in-memory
+EF Core database**, so no database server or connection string is required to
+run the API.
 
 ```bash
 # From the repository root.
@@ -93,22 +92,27 @@ dotnet run --project src/Virentum.Api
 # Swagger UI: https://localhost:5001/swagger
 ```
 
-In Development the API runs with `CustomVision:UseStub=true` (deterministic
-prediction from the image hash — no Azure account needed) and seeds a demo
-operator: **storeId** `demo-store`, **password** `changeit`.
+In Development the API uses an in-memory store (`UseInMemoryDatabase`), runs with
+`CustomVision:UseStub=true` (deterministic prediction from the image hash — no
+Azure account needed), and seeds a demo operator: **storeId** `demo-store`,
+**password** `changeit`. Data resets each time the process restarts.
 
-**Connection string by instance type** (set in `appsettings.Development.json` →
-`ConnectionStrings:Default`):
+## Database
 
-| Instance | Connection string |
-|---|---|
-| Default instance | `Server=localhost;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
-| SQL Express | `Server=localhost\\SQLEXPRESS;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
-| LocalDB | `Server=(localdb)\\MSSQLLocalDB;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
-| SQL auth | `Server=localhost;Database=Virentum;User Id=sa;Password=<pwd>;TrustServerCertificate=True` |
+| Environment | Provider | Configuration |
+|---|---|---|
+| Development | EF Core **In-Memory** | none — works out of the box |
+| Production (Railway) | **PostgreSQL** (Npgsql) | `ConnectionStrings:Postgres` **or** `DATABASE_URL` |
 
-`EnsureCreatedAsync` creates the `Virentum` database and tables on first run, so
-you don't need to create them manually in SSMS.
+The provider is selected by environment in `AddVirentumPersistence`. For
+PostgreSQL the connection string is resolved in this order:
+
+1. `ConnectionStrings:Postgres` (e.g. `ConnectionStrings__Postgres` env var), then
+2. `DATABASE_URL` (Railway's `postgres://user:pass@host:port/db`), which is
+   automatically converted to the Npgsql key/value format (TLS enabled).
+
+So on Railway you can simply attach the PostgreSQL plugin — it injects
+`DATABASE_URL` and the API picks it up with no extra config.
 
 ### Pointing the frontend at the backend
 The frontend posts to `/api/inspection/scan`. Either run it behind a dev proxy
@@ -120,7 +124,8 @@ and add the origin to `Cors:AllowedOrigins`.
 ```bash
 docker build -t virentum-backend .
 docker run --rm -p 8080:8080 \
-  -e ConnectionStrings__Default="Server=...;Database=Virentum;User Id=...;Password=...;TrustServerCertificate=True" \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ConnectionStrings__Postgres="Host=...;Port=5432;Database=virentum;Username=...;Password=..." \
   -e Jwt__Secret="a-long-random-secret-min-32-chars" \
   virentum-backend
 ```
