@@ -50,12 +50,12 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Postgres")
+        var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException(
-                "Connection string 'Postgres' is not configured. Set ConnectionStrings__Postgres.");
+                "Connection string 'Default' is not configured. Set ConnectionStrings__Default.");
 
         services.AddDbContext<VirentumDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseSqlServer(connectionString));
 
         services.AddScoped<IInspectionRepository, InspectionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

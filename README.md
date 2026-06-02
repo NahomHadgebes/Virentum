@@ -46,7 +46,7 @@ the controller, not the DI wiring.
 ### 4. Production-ready configuration & security
 - `Options/*` bound with the **Options pattern** (`IOptions<T>`) and validated at
   startup (`ValidateOnStart`). Secrets (`Jwt:Secret`, Custom Vision keys, the
-  Postgres connection string) are **never** committed — supply them via
+  database connection string) are **never** committed — supply them via
   environment variables or `dotnet user-secrets` (see `.env.example`).
 - JWT bearer authentication; `[Authorize]` on the inspection endpoint.
 - CORS policy explicitly allows the frontend origins **and** the `Authorization`
@@ -76,7 +76,10 @@ src/Virentum.Api
 
 ## Running locally
 
-Prerequisites: .NET 8 SDK and a PostgreSQL instance.
+Prerequisites: .NET 8 SDK and a SQL Server instance (LocalDB, Express, or full —
+anything you can reach from SSMS). The dev connection string uses Windows
+authentication against `localhost`; adjust it in `appsettings.Development.json`
+to match your instance (see below).
 
 ```bash
 # From the repository root.
@@ -94,6 +97,19 @@ In Development the API runs with `CustomVision:UseStub=true` (deterministic
 prediction from the image hash — no Azure account needed) and seeds a demo
 operator: **storeId** `demo-store`, **password** `changeit`.
 
+**Connection string by instance type** (set in `appsettings.Development.json` →
+`ConnectionStrings:Default`):
+
+| Instance | Connection string |
+|---|---|
+| Default instance | `Server=localhost;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
+| SQL Express | `Server=localhost\\SQLEXPRESS;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
+| LocalDB | `Server=(localdb)\\MSSQLLocalDB;Database=Virentum;Trusted_Connection=True;TrustServerCertificate=True` |
+| SQL auth | `Server=localhost;Database=Virentum;User Id=sa;Password=<pwd>;TrustServerCertificate=True` |
+
+`EnsureCreatedAsync` creates the `Virentum` database and tables on first run, so
+you don't need to create them manually in SSMS.
+
 ### Pointing the frontend at the backend
 The frontend posts to `/api/inspection/scan`. Either run it behind a dev proxy
 that forwards `/api` to `https://localhost:5001`, or set the appropriate base URL
@@ -104,7 +120,7 @@ and add the origin to `Cors:AllowedOrigins`.
 ```bash
 docker build -t virentum-backend .
 docker run --rm -p 8080:8080 \
-  -e ConnectionStrings__Postgres="Host=...;Database=virentum;Username=...;Password=..." \
+  -e ConnectionStrings__Default="Server=...;Database=Virentum;User Id=...;Password=...;TrustServerCertificate=True" \
   -e Jwt__Secret="a-long-random-secret-min-32-chars" \
   virentum-backend
 ```
