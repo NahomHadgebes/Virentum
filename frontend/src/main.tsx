@@ -1,8 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider } from '@mantine/core';
+import { BrowserRouter } from 'react-router-dom';
 import '@mantine/core/styles.css';
 import { App } from './App';
+import { AuthProvider } from './auth/AuthContext';
+import { theme } from './theme';
 
 const container = document.getElementById('root');
 
@@ -12,8 +15,12 @@ if (container === null) {
 
 createRoot(container).render(
   <StrictMode>
-    <MantineProvider defaultColorScheme="auto">
-      <App />
+    <MantineProvider theme={theme} defaultColorScheme="auto">
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
     </MantineProvider>
   </StrictMode>,
 );
