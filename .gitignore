@@ -14,3 +14,8 @@ secrets.json
 
 # EF Core
 *.db
+
+# Node / frontend build output
+node_modules/
+dist/
+*.tsbuildinfo
