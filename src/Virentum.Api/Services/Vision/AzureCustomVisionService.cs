@@ -9,16 +9,6 @@ using Virentum.Api.Options;
 
 namespace Virentum.Api.Services.Vision;
 
-/// <summary>
-/// Azure Custom Vision implementation of <see cref="IVisionService"/>.
-///
-/// In stub mode (the default for local development, controlled via
-/// <see cref="CustomVisionOptions.UseStub"/>) it returns a deterministic
-/// prediction derived from a hash of the image bytes, so the full pipeline is
-/// exercisable without provisioned cloud credentials. With stub mode disabled it
-/// calls the real Custom Vision prediction endpoint via an injected, typed
-/// <see cref="HttpClient"/>.
-/// </summary>
 public sealed class AzureCustomVisionService : IVisionService
 {
     private readonly HttpClient _httpClient;
@@ -96,11 +86,6 @@ public sealed class AzureCustomVisionService : IVisionService
         return MapPrediction(fruit, document);
     }
 
-    /// <summary>
-    /// Reduces the model's tag probabilities to a single ripeness score. Tags
-    /// whose names indicate advanced ripeness contribute positively; the highest
-    /// matching probability wins, falling back to the dominant tag's probability.
-    /// </summary>
     private static VisionPrediction MapPrediction(SupportedFruit fruit, JsonDocument document)
     {
         if (!document.RootElement.TryGetProperty("predictions", out var predictions)
@@ -111,7 +96,8 @@ public sealed class AzureCustomVisionService : IVisionService
         }
 
         var tags = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-        double ripenessScore = 0d;
+        double weightedSum = 0d;
+        double weight = 0d;
 
         foreach (var prediction in predictions.EnumerateArray())
         {
@@ -119,24 +105,36 @@ public sealed class AzureCustomVisionService : IVisionService
             var probability = prediction.GetProperty("probability").GetDouble();
             tags[tagName] = probability;
 
-            if (IsRipenessTag(tagName))
+            if (RipenessAnchors.TryGetValue(tagName, out var anchor))
             {
-                ripenessScore = Math.Max(ripenessScore, probability);
+                weightedSum += anchor * probability;
+                weight += probability;
             }
         }
 
-        return new VisionPrediction(fruit, Math.Clamp(ripenessScore, 0d, 1d), tags);
+        if (weight <= 0d)
+        {
+            throw new VisionAnalysisException(
+                "Custom Vision returned no recognised ripeness tags. Expected one of: " +
+                string.Join(", ", RipenessAnchors.Keys) + ".");
+        }
+
+        var ripenessScore = Math.Clamp(weightedSum / weight, 0d, 1d);
+        return new VisionPrediction(fruit, ripenessScore, tags);
     }
 
-    private static bool IsRipenessTag(string tagName) =>
-        tagName.Contains("ripe", StringComparison.OrdinalIgnoreCase)
-        || tagName.Contains("spoil", StringComparison.OrdinalIgnoreCase)
-        || tagName.Contains("brown", StringComparison.OrdinalIgnoreCase);
+    private static readonly IReadOnlyDictionary<string, double> RipenessAnchors =
+        new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["unripe"] = 0.15,
+            ["underripe"] = 0.35,
+            ["ripe"] = 0.60,
+            ["overripe"] = 0.92,
+            ["spoiled"] = 1.00,
+        };
 
     private static VisionPrediction BuildDeterministicStub(SupportedFruit fruit, byte[] imageBytes)
     {
-        // Hash the image so the same photo always yields the same score — useful
-        // for predictable demos and integration tests.
         var hash = SHA256.HashData(imageBytes);
         var score = (hash[0] << 8 | hash[1]) / 65535d; // 0.0 – 1.0
 

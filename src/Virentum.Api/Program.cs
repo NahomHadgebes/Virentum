@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.OpenApi.Models;
 using Virentum.Api.DependencyInjection;
 using Virentum.Api.Infrastructure.Persistence;
 using Virentum.Api.Middleware;
@@ -32,7 +33,33 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // ── API surface documentation ────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Virentum API", Version = "v1" });
+
+    // JWT bearer support so the Swagger "Authorize" button can attach a token
+    // to protected endpoints (e.g. POST /api/inspection/scan).
+    var bearerScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Paste the JWT from /api/auth/login (just the token, no 'Bearer ' prefix).",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference
+        {
+            Type = ReferenceType.SecurityScheme,
+            Id = "Bearer",
+        },
+    };
+
+    options.AddSecurityDefinition("Bearer", bearerScheme);
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [bearerScheme] = Array.Empty<string>(),
+    });
+});
 
 var app = builder.Build();
 

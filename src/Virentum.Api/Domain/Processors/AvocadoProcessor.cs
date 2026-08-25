@@ -11,8 +11,11 @@ namespace Virentum.Api.Domain.Processors;
 public sealed class AvocadoProcessor : IFruitProcessor
 {
     // Ripeness band boundaries, as whole percentages, tuned for avocados.
-    private const int ReadyCeiling = 82;   // <= 82% ⇒ premium produce section
-    private const int ActionCeiling = 93;  // 83–93% ⇒ discount / sell today
+    // Avocados darken green → dark → black as they ripen, so a bright-green fruit
+    // is underripe (hold) and a black one is overripe (remove).
+    private const int UnderripeCeiling = 35; // <= 35% ⇒ bright green, not ready
+    private const int ReadyCeiling = 82;      // 36–82% ⇒ premium produce section
+    private const int ActionCeiling = 93;     // 83–93% ⇒ discount / sell today
 
     public SupportedFruit Fruit => SupportedFruit.Avocado;
 
@@ -22,6 +25,12 @@ public sealed class AvocadoProcessor : IFruitProcessor
 
         return ripenessPercent switch
         {
+            <= UnderripeCeiling => new RipenessAssessment(
+                ripenessPercent,
+                CommercialStatus.Underripe,
+                "Still firm and bright green — not yet ripe. Hold for ripening; " +
+                "not ready for the shelf."),
+
             <= ReadyCeiling => new RipenessAssessment(
                 ripenessPercent,
                 CommercialStatus.ReadyForSale,

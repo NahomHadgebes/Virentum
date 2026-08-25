@@ -7,6 +7,9 @@ namespace Virentum.Api.Domain.Enums;
 /// </summary>
 public enum CommercialStatus
 {
+    /// <summary>Not yet ripe enough to sell — hold for ripening.</summary>
+    Underripe,
+
     /// <summary>Fit for full-price display on the shelf.</summary>
     ReadyForSale,
 

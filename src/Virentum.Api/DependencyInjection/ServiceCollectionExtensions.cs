@@ -13,19 +13,10 @@ using Virentum.Api.Services.Vision;
 
 namespace Virentum.Api.DependencyInjection;
 
-/// <summary>
-/// Composition-root helpers that keep <c>Program.cs</c> declarative. Each method
-/// owns one concern (options, persistence, domain services, auth, CORS).
-/// </summary>
 public static class ServiceCollectionExtensions
 {
     public const string CorsPolicyName = "VirentumFrontend";
 
-    /// <summary>
-    /// Binds and validates every configuration section using the Options pattern.
-    /// Validation runs at startup (<c>ValidateOnStart</c>) so misconfiguration
-    /// fails fast instead of at the first request.
-    /// </summary>
     public static IServiceCollection AddVirentumOptions(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -110,8 +101,7 @@ public static class ServiceCollectionExtensions
             Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
             Database = uri.AbsolutePath.TrimStart('/'),
             // Railway requires TLS to its managed Postgres.
-            SslMode = Npgsql.SslMode.Require,
-            TrustServerCertificate = true,
+            SslMode = Npgsql.SslMode.Require
         };
 
         return builder.ConnectionString;
@@ -129,15 +119,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITokenService, JwtTokenService>();
 
         // Typed HttpClient for the vision provider, configured from options.
-        services.AddHttpClient<IVisionService, AzureCustomVisionService>((provider, client) =>
-        {
-            var options = provider.GetRequiredService<IOptions<CustomVisionOptions>>().Value;
-            if (!string.IsNullOrWhiteSpace(options.Endpoint))
-            {
-                client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");
-            }
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-        });
+        services.AddScoped<IVisionService, ColorHeuristicVisionService>();
 
         return services;
     }

@@ -11,8 +11,11 @@ namespace Virentum.Api.Domain.Processors;
 public sealed class BananaProcessor : IFruitProcessor
 {
     // Ripeness band boundaries, as whole percentages, tuned for bananas.
-    private const int ReadyCeiling = 78;   // <= 78% ⇒ prime shelf
-    private const int ActionCeiling = 92;  // 79–92% ⇒ discount fast
+    // Bananas progress green → yellow → spotted → black, so the sweet spot is the
+    // middle: too green is unripe (hold), too dark is spoiled (remove).
+    private const int UnderripeCeiling = 42; // <= 42% ⇒ green, not ready
+    private const int ReadyCeiling = 75;     // 43–75% ⇒ prime shelf
+    private const int ActionCeiling = 88;    // 76–88% ⇒ discount fast
 
     public SupportedFruit Fruit => SupportedFruit.Banana;
 
@@ -22,6 +25,12 @@ public sealed class BananaProcessor : IFruitProcessor
 
         return ripenessPercent switch
         {
+            <= UnderripeCeiling => new RipenessAssessment(
+                ripenessPercent,
+                CommercialStatus.Underripe,
+                "Still green and underripe. Hold off the shelf and allow 1–3 days " +
+                "to ripen before display."),
+
             <= ReadyCeiling => new RipenessAssessment(
                 ripenessPercent,
                 CommercialStatus.ReadyForSale,

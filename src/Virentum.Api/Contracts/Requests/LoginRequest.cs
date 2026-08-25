@@ -7,8 +7,8 @@ namespace Virentum.Api.Contracts.Requests;
 /// never persisted.
 /// </summary>
 public sealed record LoginRequest(
-    [property: Required(AllowEmptyStrings = false)]
+    [Required(AllowEmptyStrings = false)]
     string StoreId,
-    [property: Required(AllowEmptyStrings = false)]
-    [property: MinLength(6)]
+    [Required(AllowEmptyStrings = false)]
+    [MinLength(6)]
     string Password);
