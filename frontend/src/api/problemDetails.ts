@@ -33,7 +33,8 @@ export interface ValidationProblemDetails extends ProblemDetails {
 export type ApiErrorSource =
   | 'problem-details'
   | 'opaque-response'
-  | 'network';
+  | 'network'
+  | 'client';
 
 /**
  * The single error type the UI deals with. Every field that the server did not
@@ -85,9 +86,23 @@ export class ApiError extends Error {
       .flatMap(([, messages]) => messages);
   }
 
-  /** Validation messages not tied to any field the caller asked about. */
-  get isValidationFailure(): boolean {
-    return this.fieldErrors !== null;
+  /**
+   * Validation messages for fields the caller is NOT rendering itself.
+   *
+   * A form binds the keys it knows about to its own inputs; this returns
+   * everything left over, so an unexpected ModelState key is still shown
+   * somewhere instead of disappearing.
+   */
+  fieldErrorsExcept(handled: readonly string[]): { field: string; messages: string[] }[] {
+    if (this.fieldErrors === null) {
+      return [];
+    }
+
+    const handledSet = new Set(handled.map((field) => field.toLowerCase()));
+
+    return Object.entries(this.fieldErrors)
+      .filter(([key]) => !handledSet.has(lastSegment(key).toLowerCase()))
+      .map(([field, messages]) => ({ field, messages }));
   }
 }
 
@@ -169,6 +184,26 @@ export function toNetworkError(cause: unknown): ApiError {
     traceId: null,
     fieldErrors: null,
   });
+}
+
+/**
+ * A failure raised inside the browser app rather than by the API. Labelled as
+ * such so the UI never presents a frontend bug as if the server had reported it.
+ */
+export function toClientError(cause: unknown): ApiError {
+  return new ApiError({
+    source: 'client',
+    status: null,
+    title: 'Unexpected error in the Virentum client',
+    detail: cause instanceof Error ? cause.message : String(cause),
+    traceId: null,
+    fieldErrors: null,
+  });
+}
+
+/** Narrows an unknown throw to the single error type the UI renders. */
+export function asApiError(cause: unknown): ApiError {
+  return cause instanceof ApiError ? cause : toClientError(cause);
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {

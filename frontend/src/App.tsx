@@ -1,21 +1,24 @@
-import { Code, Container, Stack, Text, Title } from '@mantine/core';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { RequireAuth } from './auth/RequireAuth';
+import { AppLayout } from './components/AppLayout';
+import { LoginPage } from './features/login/LoginPage';
+import { InspectionPage } from './features/inspection/InspectionPage';
 
-/**
- * Placeholder shell. Step 4 replaces this with the router, the auth context
- * and the login / inspection routes.
- */
 export function App() {
   return (
-    <Container size="sm" py="xl">
-      <Stack gap="xs">
-        <Title order={1}>Virentum</Title>
-        <Text c="dimmed">
-          API contract types and transport layer are in place. No screens yet.
-        </Text>
-        <Text size="sm">
-          Configured API: <Code>{import.meta.env.VITE_API_BASE_URL}</Code>
-        </Text>
-      </Stack>
-    </Container>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <InspectionPage />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
