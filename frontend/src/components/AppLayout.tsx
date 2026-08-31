@@ -1,6 +1,7 @@
 import { AppShell, Button, Group, Stack, Text, Title } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/useAuth';
+import { ColorSchemeToggle } from './ColorSchemeToggle';
 
 /** Chrome for authenticated routes: who is signed in, and a way out. */
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -9,28 +10,46 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AppShell header={{ height: 64 }} padding="md">
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Title order={3}>Virentum</Title>
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="sm">
+          <Title order={3} style={{ flexShrink: 0 }}>
+            Virentum
+          </Title>
 
-          {session !== null && (
-            <Group gap="md" wrap="nowrap">
-              <Stack gap={0} align="flex-end">
-                <Text size="sm" fw={600} lh={1.2}>
+          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+            {session !== null && (
+              // minWidth:0 lets the flex child shrink so truncate can engage;
+              // without it the button gets squeezed instead of the text.
+              <Stack gap={0} align="flex-end" style={{ minWidth: 0 }} visibleFrom="xs">
+                <Text size="sm" fw={600} lh={1.2} truncate="end" maw={180}>
                   {session.user.displayName}
                 </Text>
-                <Text size="xs" c="dimmed" lh={1.2}>
+                <Text size="xs" c="dimmed" lh={1.2} truncate="end" maw={180}>
                   {session.user.station} · {session.user.storeId}
                 </Text>
               </Stack>
-              <Button variant="default" size="xs" onClick={signOut}>
+            )}
+
+            <ColorSchemeToggle />
+
+            {session !== null && (
+              <Button variant="default" size="xs" onClick={signOut} style={{ flexShrink: 0 }}>
                 Sign out
               </Button>
-            </Group>
-          )}
+            )}
+          </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>
+        {/* The header hides the operator below xs; it still matters on a shared
+            station, so it reappears here. */}
+        {session !== null && (
+          <Text size="xs" c="dimmed" hiddenFrom="xs" mb="sm">
+            {session.user.displayName} · {session.user.station} · {session.user.storeId}
+          </Text>
+        )}
+        {children}
+      </AppShell.Main>
     </AppShell>
   );
 }

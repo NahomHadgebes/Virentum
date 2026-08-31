@@ -1,4 +1,5 @@
 import { Card, Center, Stack, Text, Title } from '@mantine/core';
+import { useDocumentTitle } from '@mantine/hooks';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { LoginForm } from './LoginForm';
@@ -12,6 +13,8 @@ export function LoginPage() {
   const { session } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useDocumentTitle('Sign in · Virentum');
 
   const state = location.state as LocationState | null;
   const destination = state?.from ?? '/';

@@ -1,0 +1,18 @@
+/*
+ * Mantine's default "dimmed" is gray-6 in light and dark-2 in dark. Measured
+ * against the surfaces this app actually uses, both land near 3.3:1 — below the
+ * 4.5:1 WCAG AA needs for text at these sizes. One step further from the
+ * background clears it without flattening the visual hierarchy.
+ *
+ * The selectors match Mantine's own so specificity ties and source order wins;
+ * a plain :root here loses to :root[data-mantine-color-scheme='...'].
+ */
+:root[data-mantine-color-scheme='light'],
+:host([data-mantine-color-scheme='light']) {
+  --mantine-color-dimmed: var(--mantine-color-gray-7);
+}
+
+:root[data-mantine-color-scheme='dark'],
+:host([data-mantine-color-scheme='dark']) {
+  --mantine-color-dimmed: var(--mantine-color-dark-1);
+}
