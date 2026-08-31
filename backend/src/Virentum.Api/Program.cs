@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Configuration & Options (strongly-typed, validated at startup) ───────────
 builder.Services.AddVirentumOptions(builder.Configuration);
 
-// ── Persistence (in-memory in Development, PostgreSQL otherwise) ──────────────
-builder.Services.AddVirentumPersistence(builder.Configuration, builder.Environment);
+// ── Persistence (PostgreSQL in every environment) ────────────────────────────
+builder.Services.AddVirentumPersistence(builder.Configuration);
 
 // ── Domain services, fruit-processor factory, vision client ──────────────────
 builder.Services.AddVirentumDomainServices();

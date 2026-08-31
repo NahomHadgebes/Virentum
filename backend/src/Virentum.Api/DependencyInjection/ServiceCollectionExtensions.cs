@@ -37,29 +37,26 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// PostgreSQL in every environment, including development.
+    ///
+    /// This used to fall back to an in-memory store locally, which needed no
+    /// setup but silently diverged from production: no schema, no enum-to-string
+    /// conversions, no indexes, and every inspection lost on restart. Since the
+    /// app now shows scan history, that divergence would be visible as a feature
+    /// that looks broken. A local database is the smaller cost.
+    /// </summary>
     public static IServiceCollection AddVirentumPersistence(
         this IServiceCollection services,
-        IConfiguration configuration,
-        IHostEnvironment environment)
+        IConfiguration configuration)
     {
-        if (environment.IsDevelopment())
-        {
-            // Zero-dependency local dev: an in-memory store, seeded at startup.
-            // No database server (or connection string) required to press F5.
-            services.AddDbContext<VirentumDbContext>(options =>
-                options.UseInMemoryDatabase("virentum-dev"));
-        }
-        else
-        {
-            // Production (e.g. Railway): PostgreSQL.
-            var connectionString = ResolvePostgresConnectionString(configuration)
-                ?? throw new InvalidOperationException(
-                    "PostgreSQL connection string is not configured. Set " +
-                    "ConnectionStrings__Postgres or provide DATABASE_URL.");
+        var connectionString = ResolvePostgresConnectionString(configuration)
+            ?? throw new InvalidOperationException(
+                "PostgreSQL connection string is not configured. Set " +
+                "ConnectionStrings__Postgres or provide DATABASE_URL.");
 
-            services.AddDbContext<VirentumDbContext>(options =>
-                options.UseNpgsql(connectionString));
-        }
+        services.AddDbContext<VirentumDbContext>(options =>
+            options.UseNpgsql(connectionString));
 
         services.AddScoped<IInspectionRepository, InspectionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

@@ -16,9 +16,11 @@ public static class DatabaseInitializer
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<VirentumDbContext>();
 
-        // Ensure the schema exists. In production, prefer EF Core migrations
-        // (dotnet ef migrations add / database update) over EnsureCreated.
-        await db.Database.EnsureCreatedAsync();
+        // Apply any pending EF Core migrations. This replaces EnsureCreated,
+        // which creates the schema once and then has no way to evolve it — the
+        // first column added to an entity would silently fail against a database
+        // that already exists.
+        await db.Database.MigrateAsync();
 
         if (!app.Environment.IsDevelopment())
         {
