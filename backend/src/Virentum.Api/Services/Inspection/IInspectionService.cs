@@ -19,4 +19,24 @@ public interface IInspectionService
         ScanRequest request,
         string storeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The store's most recent inspections, newest first.
+    /// </summary>
+    /// <param name="storeId">The authenticated store/operator id.</param>
+    /// <param name="limit">Maximum rows to return.</param>
+    Task<IReadOnlyList<InspectionHistoryItem>> GetHistoryAsync(
+        string storeId,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The store's activity over the last <paramref name="days"/> days.
+    /// </summary>
+    /// <param name="storeId">The authenticated store/operator id.</param>
+    /// <param name="days">Length of the rolling window.</param>
+    Task<InspectionSummaryResponse> GetSummaryAsync(
+        string storeId,
+        int days,
+        CancellationToken cancellationToken = default);
 }

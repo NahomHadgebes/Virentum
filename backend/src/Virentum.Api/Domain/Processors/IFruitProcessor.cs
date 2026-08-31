@@ -19,6 +19,13 @@ public interface IFruitProcessor
     SupportedFruit Fruit { get; }
 
     /// <summary>
+    /// The fruit's full ripeness policy, ascending and covering 0 through 100.
+    /// <see cref="Assess"/> evaluates from this list, and the API publishes it,
+    /// so the documented thresholds are the ones actually applied.
+    /// </summary>
+    IReadOnlyList<Models.RipenessBand> Bands { get; }
+
+    /// <summary>
     /// Evaluates a vision prediction and returns the merchandising assessment.
     /// </summary>
     RipenessAssessment Assess(VisionPrediction prediction);

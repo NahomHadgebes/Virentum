@@ -91,6 +91,55 @@ public sealed class InspectionService : IInspectionService
             record.ScannedAt);
     }
 
+    public async Task<IReadOnlyList<InspectionHistoryItem>> GetHistoryAsync(
+        string storeId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var records = await _repository.GetRecentByStoreAsync(storeId, limit, cancellationToken);
+
+        return records
+            .Select(record => new InspectionHistoryItem(
+                record.Id,
+                record.FruitType,
+                record.RipenessPercent,
+                record.CommercialStatus,
+                record.Recommendation,
+                record.ScannedAt))
+            .ToList();
+    }
+
+    public async Task<InspectionSummaryResponse> GetSummaryAsync(
+        string storeId,
+        int days,
+        CancellationToken cancellationToken = default)
+    {
+        var since = _clock.GetUtcNow().AddDays(-days);
+        var statistics = await _repository.GetStatisticsSinceAsync(storeId, since, cancellationToken);
+
+        return new InspectionSummaryResponse(
+            days,
+            since,
+            statistics.TotalScans,
+            ZeroFilled(statistics.CountByStatus, (status, count) => new StatusCount(status, count)),
+            ZeroFilled(statistics.CountByFruit, (fruit, count) => new FruitCount(fruit, count)),
+            statistics.AverageRipenessPercent,
+            statistics.LastScanAt);
+    }
+
+    /// <summary>
+    /// Projects a sparse count map onto every member of the enum, in declaration
+    /// order. The client charts a fixed set of categories, so absence has to be
+    /// an explicit zero rather than a missing key.
+    /// </summary>
+    private static IReadOnlyList<TResult> ZeroFilled<TEnum, TResult>(
+        IReadOnlyDictionary<TEnum, int> counts,
+        Func<TEnum, int, TResult> project)
+        where TEnum : struct, Enum =>
+        Enum.GetValues<TEnum>()
+            .Select(member => project(member, counts.TryGetValue(member, out var count) ? count : 0))
+            .ToList();
+
     private static async Task<byte[]> ReadAndValidateImageAsync(
         ScanRequest request,
         CancellationToken cancellationToken)

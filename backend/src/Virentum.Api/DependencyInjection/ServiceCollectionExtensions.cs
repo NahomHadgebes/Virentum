@@ -7,6 +7,7 @@ using Virentum.Api.Infrastructure.Persistence;
 using Virentum.Api.Infrastructure.Persistence.Repositories;
 using Virentum.Api.Options;
 using Virentum.Api.Services.Auth;
+using Virentum.Api.Services.Catalog;
 using Virentum.Api.Services.Inspection;
 using Virentum.Api.Services.Security;
 using Virentum.Api.Services.Vision;
@@ -111,6 +112,9 @@ public static class ServiceCollectionExtensions
         services.AddFruitProcessors();
 
         services.AddScoped<IInspectionService, InspectionService>();
+        // Built once from the registered processors; the catalogue never changes
+        // at runtime.
+        services.AddSingleton<IFruitCatalogService, FruitCatalogService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
