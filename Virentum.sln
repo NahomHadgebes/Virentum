@@ -1,0 +1,30 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Virentum.Api", "backend\src\Virentum.Api\Virentum.Api.csproj", "{DCB007EF-FA5E-4C43-A03C-FFDF9AB27AB4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Virentum.Api.Tests", "backend\tests\Virentum.Api.Tests\Virentum.Api.Tests.csproj", "{67A38F2E-8495-409D-AF74-3C152439E49A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCB007EF-FA5E-4C43-A03C-FFDF9AB27AB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCB007EF-FA5E-4C43-A03C-FFDF9AB27AB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCB007EF-FA5E-4C43-A03C-FFDF9AB27AB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCB007EF-FA5E-4C43-A03C-FFDF9AB27AB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67A38F2E-8495-409D-AF74-3C152439E49A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67A38F2E-8495-409D-AF74-3C152439E49A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67A38F2E-8495-409D-AF74-3C152439E49A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67A38F2E-8495-409D-AF74-3C152439E49A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B3E27EF3-7AA6-4387-A8C7-376D41ECF40C}
+	EndGlobalSection
+EndGlobal
