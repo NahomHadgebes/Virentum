@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Container, Stack, Title } from '@mantine/core';
+import { useDocumentTitle, useScrollIntoView } from '@mantine/hooks';
 import { scan } from '../../api/inspection';
 import { asApiError } from '../../api/problemDetails';
 import type { ApiError } from '../../api/problemDetails';
@@ -30,6 +31,11 @@ export function InspectionPage() {
   const [result, setResult] = useState<InspectionResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [scanning, setScanning] = useState(false);
+
+  useDocumentTitle('Inspection · Virentum');
+
+  // On a phone the result card lands below the fold, so bring it into view.
+  const { scrollIntoView, targetRef } = useScrollIntoView<HTMLDivElement>({ offset: 80 });
 
   // The live object URL, mirrored in a ref so it can be revoked from an event
   // handler. Revoking from an effect that depends on the selection would break
@@ -87,6 +93,7 @@ export function InspectionPage() {
 
     try {
       setResult(await scan({ image: selection.file, fruitType }));
+      scrollIntoView();
     } catch (cause) {
       // A 401 here means the token expired. api/client.ts has already cleared
       // the session, which re-renders RequireAuth and routes to /login.
@@ -131,7 +138,9 @@ export function InspectionPage() {
 
         {error !== null && <ProblemAlert error={error} handledFields={['Image', 'FruitType']} />}
 
-        {result !== null && <InspectionResult result={result} />}
+        <div ref={targetRef}>
+          {result !== null && <InspectionResult result={result} />}
+        </div>
       </Stack>
     </Container>
   );

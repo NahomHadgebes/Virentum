@@ -17,7 +17,7 @@ export function InspectionResult({ result }: { result: InspectionResponse }) {
       <Stack gap="md">
         <Group justify="space-between" align="flex-start" wrap="nowrap">
           <Title order={3}>{result.fruitType}</Title>
-          <Badge color={status.color} size="lg" variant="light">
+          <Badge color={status.color} size="lg" variant="filled">
             {status.label}
           </Badge>
         </Group>

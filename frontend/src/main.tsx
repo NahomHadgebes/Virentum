@@ -4,6 +4,7 @@ import { MantineProvider } from '@mantine/core';
 import { BrowserRouter } from 'react-router-dom';
 import '@mantine/core/styles.css';
 import '@mantine/dropzone/styles.css';
+import './theme.css';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { theme } from './theme';
