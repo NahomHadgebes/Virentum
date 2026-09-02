@@ -1,6 +1,7 @@
-import { AppShell, Button, Group, Stack, Text, Title } from '@mantine/core';
+import { AppShell, Box, Button, Group, Stack, Text, Title } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/useAuth';
+import { AppNav } from './AppNav';
 import { ColorSchemeToggle } from './ColorSchemeToggle';
 
 /** Chrome for authenticated routes: who is signed in, and a way out. */
@@ -48,7 +49,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {session.user.displayName} · {session.user.station} · {session.user.storeId}
           </Text>
         )}
-        {children}
+        {/* Deliberately block flow rather than a flex Stack: a flex item defaults
+            to min-width:auto, so a page containing anything wide — the history
+            table, at 620px — would refuse to shrink and push the whole layout
+            past the viewport. */}
+        <AppNav />
+        <Box mt="lg">{children}</Box>
       </AppShell.Main>
     </AppShell>
   );

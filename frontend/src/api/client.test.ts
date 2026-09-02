@@ -9,7 +9,7 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, Server } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from './problemDetails';
-import { post } from './client';
+import { get, post } from './client';
 import * as tokenStorage from '../auth/tokenStorage';
 
 /**
@@ -130,6 +130,64 @@ describe('sending a request', () => {
     const result = await post<{ token: string }>({ path: '/x', body: {}, authenticated: false });
 
     expect(result.token).toBe('abc');
+  });
+});
+
+describe('GET requests', () => {
+  it('sends the method and path, with the query string intact', async () => {
+    tokenStorage.write(SESSION);
+
+    await get('/api/inspection/history?limit=50');
+
+    expect(received?.method).toBe('GET');
+    expect(received?.url).toBe('/api/inspection/history?limit=50');
+  });
+
+  it('carries the bearer token', async () => {
+    tokenStorage.write(SESSION);
+
+    await get('/api/fruits');
+
+    expect(received?.headers.authorization).toBe('Bearer test.jwt.token');
+  });
+
+  /**
+   * A GET has no body, so it must not claim to have one. Sending a
+   * Content-Type here would also add a header to the CORS preflight for no
+   * reason.
+   */
+  it('sends no body and no Content-Type', async () => {
+    tokenStorage.write(SESSION);
+
+    await get('/api/fruits');
+
+    expect(received?.body).toBe('');
+    expect(received?.headers['content-type']).toBeUndefined();
+  });
+
+  it('translates a failure the same way a POST does', async () => {
+    tokenStorage.write(SESSION);
+    respond = () => ({
+      status: 400,
+      type: 'application/problem+json',
+      body: JSON.stringify({ title: 'Invalid request', traceId: 'trace-get' }),
+    });
+
+    const error = (await get('/api/inspection/history?limit=999').catch(
+      (cause: unknown) => cause,
+    )) as ApiError;
+
+    expect(error.title).toBe('Invalid request');
+    expect(error.traceId).toBe('trace-get');
+  });
+
+  it('clears the session when the token is rejected', async () => {
+    tokenStorage.write(SESSION);
+    respond = () => ({ status: 401 });
+
+    await get('/api/inspection/history').catch(() => null);
+
+    expect(tokenStorage.getSnapshot()).toBeNull();
   });
 });
 

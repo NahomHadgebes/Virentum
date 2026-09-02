@@ -3,6 +3,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './features/login/LoginPage';
 import { InspectionPage } from './features/inspection/InspectionPage';
+import { HistoryPage } from './features/history/HistoryPage';
 
 export function App() {
   return (
@@ -14,6 +15,16 @@ export function App() {
           <RequireAuth>
             <AppLayout>
               <InspectionPage />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <HistoryPage />
             </AppLayout>
           </RequireAuth>
         }

@@ -26,7 +26,7 @@ function resolveBaseUrl(): string {
   return configured.trim().replace(/\/+$/, '');
 }
 
-interface RequestOptions {
+interface PostOptions {
   path: string;
   /** JSON is serialised; FormData is passed through untouched. */
   body: unknown;
@@ -34,11 +34,30 @@ interface RequestOptions {
   authenticated: boolean;
 }
 
-export async function post<TResponse>(options: RequestOptions): Promise<TResponse> {
-  const headers = new Headers();
-  let payload: BodyInit;
+interface RequestOptions extends PostOptions {
+  method: 'GET' | 'POST';
+}
 
-  if (options.body instanceof FormData) {
+export function post<TResponse>(options: PostOptions): Promise<TResponse> {
+  return request<TResponse>({ ...options, method: 'POST' });
+}
+
+/**
+ * Every GET in this API is behind the bearer token, so there is no
+ * unauthenticated variant to choose between.
+ */
+export function get<TResponse>(path: string): Promise<TResponse> {
+  return request<TResponse>({ method: 'GET', path, body: null, authenticated: true });
+}
+
+async function request<TResponse>(options: RequestOptions): Promise<TResponse> {
+  const headers = new Headers();
+  let payload: BodyInit | undefined;
+
+  if (options.method === 'GET') {
+    // A GET carries no body, and no Content-Type describing one.
+    payload = undefined;
+  } else if (options.body instanceof FormData) {
     // Content-Type is intentionally unset: the browser must add the multipart
     // boundary itself.
     payload = options.body;
@@ -67,9 +86,9 @@ export async function post<TResponse>(options: RequestOptions): Promise<TRespons
   let response: Response;
   try {
     response = await fetch(`${baseUrl}${options.path}`, {
-      method: 'POST',
+      method: options.method,
       headers,
-      body: payload,
+      ...(payload === undefined ? {} : { body: payload }),
     });
   } catch (cause) {
     throw toNetworkError(cause);

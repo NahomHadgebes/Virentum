@@ -47,3 +47,64 @@ export interface InspectionResponse {
   /** DateTimeOffset, ISO 8601 with offset. */
   scannedAt: string;
 }
+
+/** Contracts/Responses/InspectionHistoryItem.cs */
+export interface InspectionHistoryItem {
+  id: string;
+  fruitType: SupportedFruit;
+  /** Whole percent, 0–100. */
+  ripenessPercent: number;
+  commercialStatus: CommercialStatus;
+  recommendation: string;
+  /** DateTimeOffset, ISO 8601 with offset. */
+  scannedAt: string;
+}
+
+/** Contracts/Responses/InspectionSummaryResponse.cs — StatusCount */
+export interface StatusCount {
+  commercialStatus: CommercialStatus;
+  count: number;
+}
+
+/** Contracts/Responses/InspectionSummaryResponse.cs — FruitCount */
+export interface FruitCount {
+  fruitType: SupportedFruit;
+  count: number;
+}
+
+/**
+ * Contracts/Responses/InspectionSummaryResponse.cs
+ *
+ * byStatus and byFruit always list every enum member in declaration order,
+ * zero-filled, so a chart has a stable set of categories even for a quiet week.
+ */
+export interface InspectionSummaryResponse {
+  windowDays: number;
+  since: string;
+  totalScans: number;
+  byStatus: StatusCount[];
+  byFruit: FruitCount[];
+  /** Null when nothing was scanned — not zero, which would read as "unripe". */
+  averageRipenessPercent: number | null;
+  lastScanAt: string | null;
+}
+
+/**
+ * Contracts/Responses/FruitProfileResponse.cs — RipenessBandResponse
+ *
+ * guidanceTemplate is a template, not finished copy: where the advice quotes the
+ * measured value it contains a `{0}` placeholder. A view rendering the catalogue
+ * has to present that deliberately rather than printing it raw.
+ */
+export interface RipenessBandResponse {
+  minPercent: number;
+  maxPercent: number;
+  commercialStatus: CommercialStatus;
+  guidanceTemplate: string;
+}
+
+/** Contracts/Responses/FruitProfileResponse.cs */
+export interface FruitProfileResponse {
+  fruitType: SupportedFruit;
+  bands: RipenessBandResponse[];
+}
