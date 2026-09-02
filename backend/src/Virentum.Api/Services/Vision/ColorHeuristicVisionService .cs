@@ -95,9 +95,9 @@ public sealed class ColorHeuristicVisionService : IVisionService
 
             var tags = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
             {
-                ["green"] = greenFrac,
-                ["yellow"] = yellowFrac,
-                ["brownDark"] = brownFrac,
+                [ColourBuckets.Green] = greenFrac,
+                [ColourBuckets.Yellow] = yellowFrac,
+                [ColourBuckets.BrownDark] = brownFrac,
             };
 
             _logger.LogInformation(

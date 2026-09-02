@@ -1,3 +1,4 @@
+using System.Globalization;
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Models;
 
@@ -15,15 +16,67 @@ namespace Virentum.Api.Domain.Processors;
 /// </summary>
 public abstract class FruitProcessor : IFruitProcessor
 {
-    protected FruitProcessor(SupportedFruit fruit, IReadOnlyList<RipenessBand> bands)
+    /// <summary>
+    /// How much of the measured colour has to sit outside the fruit's profile
+    /// before the selection is worth questioning. Half is deliberately blunt:
+    /// the check exists to catch a picture of a different fruit, not to
+    /// second-guess unusual lighting.
+    /// </summary>
+    private const double MismatchThreshold = 0.5;
+
+    protected FruitProcessor(
+        SupportedFruit fruit,
+        IReadOnlyList<RipenessBand> bands,
+        ColourProfile colourProfile)
     {
         Fruit = fruit;
         Bands = Validate(fruit, bands);
+        ColourProfile = colourProfile;
     }
 
     public SupportedFruit Fruit { get; }
 
     public IReadOnlyList<RipenessBand> Bands { get; }
+
+    public ColourProfile ColourProfile { get; }
+
+    public string? DescribeColourMismatch(VisionPrediction prediction)
+    {
+        // Only colour buckets are evidence here. A provider that reports
+        // something else — the Custom Vision stub reports ripe/unripe — says
+        // nothing about colour, and silence is the honest answer.
+        var measured = prediction.Tags
+            .Where(tag => ColourBuckets.All.Contains(tag.Key))
+            .ToList();
+
+        if (measured.Count == 0)
+        {
+            return null;
+        }
+
+        var offProfile = measured
+            .Where(tag => !ColourProfile.PlausibleBuckets.Contains(tag.Key))
+            .ToList();
+
+        if (offProfile.Count == 0)
+        {
+            return null;
+        }
+
+        var share = offProfile.Sum(tag => tag.Value);
+        if (share < MismatchThreshold)
+        {
+            return null;
+        }
+
+        var dominant = offProfile.OrderByDescending(tag => tag.Value).First();
+
+        var percent = (share * 100d).ToString("F0", CultureInfo.InvariantCulture);
+
+        return $"{percent}% of this image reads as {ColourBuckets.Describe(dominant.Key)}, " +
+               $"which is unusual for {Fruit}. Virentum measures colour, not fruit " +
+               "identity - check that the right fruit is selected.";
+    }
 
     public RipenessAssessment Assess(VisionPrediction prediction)
     {

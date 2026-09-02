@@ -31,8 +31,15 @@ public sealed class BananaProcessor : FruitProcessor
             "compost / supplier credit log."),
     };
 
+    // A banana passes through every bucket this system measures on its way from
+    // green to black, so no colour distribution contradicts a banana. This
+    // profile can therefore never raise a mismatch — which is the honest
+    // outcome, not an omission.
+    private static readonly ColourProfile Colours =
+        ColourProfile.Of(ColourBuckets.Green, ColourBuckets.Yellow, ColourBuckets.BrownDark);
+
     public BananaProcessor()
-        : base(SupportedFruit.Banana, BandDefinitions)
+        : base(SupportedFruit.Banana, BandDefinitions, Colours)
     {
     }
 }

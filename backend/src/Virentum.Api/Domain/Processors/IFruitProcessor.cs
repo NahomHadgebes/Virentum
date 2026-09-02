@@ -25,6 +25,15 @@ public interface IFruitProcessor
     /// </summary>
     IReadOnlyList<Models.RipenessBand> Bands { get; }
 
+    /// <summary>The colours this fruit can legitimately present.</summary>
+    Models.ColourProfile ColourProfile { get; }
+
+    /// <summary>
+    /// A message for the operator when the image is dominated by a colour this
+    /// fruit never takes, or null when nothing contradicts the selection.
+    /// </summary>
+    string? DescribeColourMismatch(Models.VisionPrediction prediction);
+
     /// <summary>
     /// Evaluates a vision prediction and returns the merchandising assessment.
     /// </summary>

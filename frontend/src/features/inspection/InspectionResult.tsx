@@ -1,4 +1,4 @@
-import { Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
 import type { InspectionResponse } from '../../types/contracts';
 import { presentStatus } from '../../status/statusPresentation';
 import { RipenessBar } from './RipenessBar';
@@ -21,6 +21,14 @@ export function InspectionResult({ result }: { result: InspectionResponse }) {
             {status.label}
           </Badge>
         </Group>
+
+        {/* Shown above the advice: if the wrong fruit was selected, the advice
+            below it is answering the wrong question. */}
+        {result.colourMismatch !== null && (
+          <Alert color="yellow" variant="light" title="Check the selected fruit" role="alert">
+            <Text size="sm">{result.colourMismatch}</Text>
+          </Alert>
+        )}
 
         <RipenessBar percent={result.ripenessPercent} color={status.color} />
 

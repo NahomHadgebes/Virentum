@@ -39,6 +39,7 @@ export interface ScanRequest {
 
 /** Contracts/Responses/InspectionResponse.cs */
 export interface InspectionResponse {
+  /** The fruit the operator selected, echoed back — never derived from the image. */
   fruitType: SupportedFruit;
   /** Whole percent, 0–100. */
   ripenessPercent: number;
@@ -46,6 +47,12 @@ export interface InspectionResponse {
   recommendation: string;
   /** DateTimeOffset, ISO 8601 with offset. */
   scannedAt: string;
+  /**
+   * Set when the image is dominated by a colour the selected fruit never takes,
+   * null otherwise. The assessment is still valid on its own terms; this is a
+   * prompt to check the selection, not a rejection.
+   */
+  colourMismatch: string | null;
 }
 
 /** Contracts/Responses/InspectionHistoryItem.cs */

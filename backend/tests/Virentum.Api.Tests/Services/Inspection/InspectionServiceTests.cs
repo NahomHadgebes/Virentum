@@ -179,6 +179,53 @@ public sealed class InspectionServiceTests
         Assert.NotEqual(Guid.Empty, saved.Id);
     }
 
+    /// <summary>
+    /// The colour heuristic reports buckets, so a real scan can carry a
+    /// mismatch. The stub reports none, which is why these two cases differ.
+    /// </summary>
+    [Fact]
+    public async Task Reports_no_colour_mismatch_when_the_provider_measured_no_colour()
+    {
+        var response = await ScanAsync(FileOf("image/png"), SupportedFruit.Avocado, 0.5);
+
+        Assert.Null(response.ColourMismatch);
+    }
+
+    [Fact]
+    public async Task Passes_a_colour_mismatch_through_without_blocking_the_assessment()
+    {
+        var yellowImage = new ColourReportingVisionService(green: 0.1, yellow: 0.85, brownDark: 0.05);
+
+        var response = await ScanAsync(FileOf("image/png"), SupportedFruit.Avocado, vision: yellowImage);
+
+        Assert.NotNull(response.ColourMismatch);
+        Assert.Contains("Avocado", response.ColourMismatch, StringComparison.Ordinal);
+        // The scan still produced a verdict and was still recorded.
+        Assert.Equal(SupportedFruit.Avocado, response.FruitType);
+        Assert.Single(_repository.Saved);
+    }
+
+    private sealed class ColourReportingVisionService : IVisionService
+    {
+        private readonly Dictionary<string, double> _tags;
+
+        public ColourReportingVisionService(double green, double yellow, double brownDark)
+        {
+            _tags = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ColourBuckets.Green] = green,
+                [ColourBuckets.Yellow] = yellow,
+                [ColourBuckets.BrownDark] = brownDark,
+            };
+        }
+
+        public Task<VisionPrediction> AnalyseAsync(
+            SupportedFruit fruit,
+            byte[] imageBytes,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new VisionPrediction(fruit, 0.6, _tags));
+    }
+
     [Fact]
     public async Task Lets_a_vision_failure_surface_as_a_bad_gateway()
     {

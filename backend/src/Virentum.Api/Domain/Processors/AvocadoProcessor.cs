@@ -30,8 +30,13 @@ public sealed class AvocadoProcessor : FruitProcessor
             "supplier credit log."),
     };
 
+    // An avocado darkens from green to near-black and never turns yellow, so a
+    // yellow-dominated image is evidence the operator selected the wrong fruit.
+    private static readonly ColourProfile Colours =
+        ColourProfile.Of(ColourBuckets.Green, ColourBuckets.BrownDark);
+
     public AvocadoProcessor()
-        : base(SupportedFruit.Avocado, BandDefinitions)
+        : base(SupportedFruit.Avocado, BandDefinitions, Colours)
     {
     }
 }

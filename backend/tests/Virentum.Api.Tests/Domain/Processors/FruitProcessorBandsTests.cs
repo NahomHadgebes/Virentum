@@ -17,7 +17,7 @@ public sealed class FruitProcessorBandsTests
     private sealed class TestProcessor : FruitProcessor
     {
         public TestProcessor(params RipenessBand[] bands)
-            : base(SupportedFruit.Banana, bands)
+            : base(SupportedFruit.Banana, bands, ColourProfile.Of(ColourBuckets.Green))
         {
         }
     }

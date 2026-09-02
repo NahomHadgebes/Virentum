@@ -61,6 +61,15 @@ public sealed class InspectionService : IInspectionService
         var processor = _processorFactory.Create(request.FruitType);
         RipenessAssessment assessment = processor.Assess(prediction);
 
+        // The operator declares the fruit; nothing in the pipeline identifies
+        // it. This is the one contradiction the colour data can actually catch.
+        var colourMismatch = processor.DescribeColourMismatch(prediction);
+        if (colourMismatch is not null)
+        {
+            _logger.LogInformation(
+                "Colour mismatch for store {StoreId}: {Mismatch}", storeId, colourMismatch);
+        }
+
         // 3. Persist (entity stays inside this layer).
         var scannedAt = _clock.GetUtcNow();
         var record = new InspectionRecord
@@ -88,7 +97,8 @@ public sealed class InspectionService : IInspectionService
             record.RipenessPercent,
             record.CommercialStatus,
             record.Recommendation,
-            record.ScannedAt);
+            record.ScannedAt,
+            colourMismatch);
     }
 
     public async Task<IReadOnlyList<InspectionHistoryItem>> GetHistoryAsync(
