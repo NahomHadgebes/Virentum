@@ -12,6 +12,11 @@ const TIMESTAMP_FORMAT = new Intl.DateTimeFormat(undefined, {
 export function InspectionResult({ result }: { result: InspectionResponse }) {
   const status = presentStatus(result.commercialStatus);
 
+  // An API without this field sends nothing rather than null, and
+  // `undefined !== null` is true — which rendered a warning box with no message
+  // in it. Only an actual message counts as a mismatch.
+  const mismatch = result.colourMismatch?.trim() ?? '';
+
   return (
     <Card withBorder padding="lg" radius="md">
       <Stack gap="md">
@@ -24,9 +29,9 @@ export function InspectionResult({ result }: { result: InspectionResponse }) {
 
         {/* Shown above the advice: if the wrong fruit was selected, the advice
             below it is answering the wrong question. */}
-        {result.colourMismatch !== null && (
+        {mismatch !== '' && (
           <Alert color="yellow" variant="light" title="Check the selected fruit" role="alert">
-            <Text size="sm">{result.colourMismatch}</Text>
+            <Text size="sm">{mismatch}</Text>
           </Alert>
         )}
 
