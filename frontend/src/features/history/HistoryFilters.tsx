@@ -2,7 +2,7 @@ import { Group, Select } from '@mantine/core';
 import { COMMERCIAL_STATUSES, SUPPORTED_FRUITS } from '../../types/enums';
 import type { CommercialStatus, SupportedFruit } from '../../types/enums';
 import { HISTORY_LIMIT_CHOICES } from '../../validation/history';
-import { presentStatus } from '../inspection/statusPresentation';
+import { presentStatus } from '../../status/statusPresentation';
 
 /** Sentinel for "no filter". Not a value the API knows about. */
 export const ANY = 'any';

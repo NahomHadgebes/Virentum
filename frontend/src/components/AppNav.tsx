@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const TABS: ReadonlyArray<{ path: string; label: string }> = [
   { path: '/', label: 'Inspect' },
   { path: '/history', label: 'History' },
+  { path: '/dashboard', label: 'Dashboard' },
+  { path: '/fruits', label: 'Fruit guide' },
 ];
 
 export function AppNav() {

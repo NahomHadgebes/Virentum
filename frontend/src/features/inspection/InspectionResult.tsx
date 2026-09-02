@@ -1,6 +1,6 @@
 import { Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
 import type { InspectionResponse } from '../../types/contracts';
-import { presentStatus } from './statusPresentation';
+import { presentStatus } from '../../status/statusPresentation';
 import { RipenessBar } from './RipenessBar';
 
 /** Browser-local formatting of the API's DateTimeOffset. */

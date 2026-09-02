@@ -2,6 +2,7 @@
 import type {
   InspectionHistoryItem,
   InspectionResponse,
+  InspectionSummaryResponse,
   ScanRequest,
 } from '../types/contracts';
 import { get, post } from './client';
@@ -25,4 +26,10 @@ export function scan(request: ScanRequest): Promise<InspectionResponse> {
 export function getHistory(limit: number): Promise<InspectionHistoryItem[]> {
   const query = new URLSearchParams({ limit: String(limit) });
   return get<InspectionHistoryItem[]>(`/api/inspection/history?${query.toString()}`);
+}
+
+/** GET /api/inspection/summary — Controllers/InspectionController.cs */
+export function getSummary(days: number): Promise<InspectionSummaryResponse> {
+  const query = new URLSearchParams({ days: String(days) });
+  return get<InspectionSummaryResponse>(`/api/inspection/summary?${query.toString()}`);
 }
