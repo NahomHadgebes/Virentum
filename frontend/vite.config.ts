@@ -11,6 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
+    setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     env: {
       // api/client.ts resolves this once at module load. The client test serves

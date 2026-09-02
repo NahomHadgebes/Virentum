@@ -4,52 +4,34 @@ using Virentum.Api.Domain.Models;
 namespace Virentum.Api.Domain.Processors;
 
 /// <summary>
-/// Avocado-specific merchandising logic. Avocados are sold firm and rely on the
-/// cold chain, so the advice references temperature and the "ready" band runs
-/// higher than for bananas. Thresholds and copy are isolated to this class.
+/// Avocado-specific merchandising policy. Avocados darken green to dark to black
+/// as they ripen, are sold firm and rely on the cold chain, so the advice
+/// references temperature and the "ready" band runs higher than for bananas.
+///
+/// These bands are the only place the avocado thresholds exist.
 /// </summary>
-public sealed class AvocadoProcessor : IFruitProcessor
+public sealed class AvocadoProcessor : FruitProcessor
 {
-    // Ripeness band boundaries, as whole percentages, tuned for avocados.
-    // Avocados darken green → dark → black as they ripen, so a bright-green fruit
-    // is underripe (hold) and a black one is overripe (remove).
-    private const int UnderripeCeiling = 35; // <= 35% ⇒ bright green, not ready
-    private const int ReadyCeiling = 82;      // 36–82% ⇒ premium produce section
-    private const int ActionCeiling = 93;     // 83–93% ⇒ discount / sell today
-
-    public SupportedFruit Fruit => SupportedFruit.Avocado;
-
-    public RipenessAssessment Assess(VisionPrediction prediction)
+    private static readonly RipenessBand[] BandDefinitions =
     {
-        var ripenessPercent = ToPercent(prediction.RipenessScore);
+        new(0, 35, CommercialStatus.Underripe,
+            "Still firm and bright green — not yet ripe. Hold for ripening; " +
+            "not ready for the shelf."),
 
-        return ripenessPercent switch
-        {
-            <= UnderripeCeiling => new RipenessAssessment(
-                ripenessPercent,
-                CommercialStatus.Underripe,
-                "Still firm and bright green — not yet ripe. Hold for ripening; " +
-                "not ready for the shelf."),
+        new(36, 82, CommercialStatus.ReadyForSale,
+            "Firm and ready for the premium produce section. Maintain at 4°C."),
 
-            <= ReadyCeiling => new RipenessAssessment(
-                ripenessPercent,
-                CommercialStatus.ReadyForSale,
-                "Firm and ready for the premium produce section. Maintain at 4°C."),
+        new(83, 93, CommercialStatus.ActionRequired,
+            "Ripening fast at {0}%. Apply a 50% discount label and move to the " +
+            "'ready to eat' basket for same-day sale."),
 
-            <= ActionCeiling => new RipenessAssessment(
-                ripenessPercent,
-                CommercialStatus.ActionRequired,
-                $"Ripening fast at {ripenessPercent}%. Apply a 50% discount label and " +
-                "move to the 'ready to eat' basket for same-day sale."),
+        new(94, 100, CommercialStatus.Expired,
+            "Overripe and bruising. Remove from display and route to compost / " +
+            "supplier credit log."),
+    };
 
-            _ => new RipenessAssessment(
-                ripenessPercent,
-                CommercialStatus.Expired,
-                "Overripe and bruising. Remove from display and route to compost / " +
-                "supplier credit log."),
-        };
+    public AvocadoProcessor()
+        : base(SupportedFruit.Avocado, BandDefinitions)
+    {
     }
-
-    private static int ToPercent(double score) =>
-        (int)Math.Round(Math.Clamp(score, 0d, 1d) * 100d);
 }

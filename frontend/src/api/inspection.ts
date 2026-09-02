@@ -1,6 +1,10 @@
 /** POST /api/inspection/scan — Controllers/InspectionController.cs */
-import type { InspectionResponse, ScanRequest } from '../types/contracts';
-import { post } from './client';
+import type {
+  InspectionHistoryItem,
+  InspectionResponse,
+  ScanRequest,
+} from '../types/contracts';
+import { get, post } from './client';
 
 export function scan(request: ScanRequest): Promise<InspectionResponse> {
   const form = new FormData();
@@ -15,4 +19,10 @@ export function scan(request: ScanRequest): Promise<InspectionResponse> {
     body: form,
     authenticated: true,
   });
+}
+
+/** GET /api/inspection/history — Controllers/InspectionController.cs */
+export function getHistory(limit: number): Promise<InspectionHistoryItem[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return get<InspectionHistoryItem[]>(`/api/inspection/history?${query.toString()}`);
 }

@@ -1,3 +1,4 @@
+using Virentum.Api.Domain.Models;
 using Virentum.Api.Infrastructure.Persistence.Entities;
 
 namespace Virentum.Api.Infrastructure.Persistence.Repositories;
@@ -13,5 +14,13 @@ public interface IInspectionRepository
     Task<IReadOnlyList<InspectionRecord>> GetRecentByStoreAsync(
         string storeId,
         int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Aggregates a store's activity from <paramref name="since"/> onwards.
+    /// </summary>
+    Task<InspectionStatistics> GetStatisticsSinceAsync(
+        string storeId,
+        DateTimeOffset since,
         CancellationToken cancellationToken = default);
 }
