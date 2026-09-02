@@ -13,11 +13,10 @@ namespace Virentum.Api.Contracts.Responses;
 /// <param name="CommercialStatus">The merchandising decision for that ripeness.</param>
 /// <param name="Recommendation">Advice for the store associate.</param>
 /// <param name="ScannedAt">When the inspection was recorded.</param>
-/// <param name="ColourMismatch">
-/// Set when the image is dominated by a colour the selected fruit never takes,
-/// and null otherwise. The assessment is still returned: Virentum measures
-/// colour rather than identifying produce, so this is a prompt to check the
-/// selection, not a rejection of the scan.
+/// <param name="Evidence">
+/// How much weight this reading can carry. The assessment is always returned;
+/// this says whether it should be taken at face value, and if not, why. A
+/// client must not present an unreliable reading as a finding.
 /// </param>
 public sealed record InspectionResponse(
     SupportedFruit FruitType,
@@ -25,4 +24,16 @@ public sealed record InspectionResponse(
     CommercialStatus CommercialStatus,
     string Recommendation,
     DateTimeOffset ScannedAt,
-    string? ColourMismatch);
+    InspectionEvidenceResponse Evidence);
+
+/// <summary>
+/// What the colour stage had to work with. The stage is a heuristic that counts
+/// hues; on a poor photograph the number it produces is arithmetic rather than
+/// evidence, and saying so is the difference between a measurement and a guess
+/// wearing a measurement's clothes.
+/// </summary>
+/// <param name="IsReliable">False when at least one concern was raised.</param>
+/// <param name="Concerns">Plain statements of what limits this reading.</param>
+public sealed record InspectionEvidenceResponse(
+    bool IsReliable,
+    IReadOnlyList<string> Concerns);

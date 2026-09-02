@@ -13,6 +13,12 @@ namespace Virentum.Api.Tests.Domain.Processors;
 /// </summary>
 public sealed class ColourMismatchTests
 {
+    private static string? Mismatch(IFruitProcessor processor, VisionPrediction prediction)
+    {
+        var evidence = processor.AssessEvidence(prediction);
+        return evidence.Concerns.FirstOrDefault(concern => concern.Contains("reads as", StringComparison.Ordinal));
+    }
+
     private static VisionPrediction Colours(
         SupportedFruit fruit,
         double green,
@@ -23,34 +29,33 @@ public sealed class ColourMismatchTests
             [ColourBuckets.Green] = green,
             [ColourBuckets.Yellow] = yellow,
             [ColourBuckets.BrownDark] = brownDark,
-        });
+        },
+        // Ample coverage, so only the colour-profile concern can fire here.
+        AnalysedShare: 0.8);
 
     /// <summary>The case that prompted this: a photo of bananas, filed as avocado.</summary>
     [Fact]
     public void Flags_a_yellow_image_declared_as_an_avocado()
     {
-        var mismatch = new AvocadoProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.10, yellow: 0.80, brownDark: 0.10));
+        var mismatch = Mismatch(new AvocadoProcessor(), Colours(SupportedFruit.Avocado, green: 0.10, yellow: 0.80, brownDark: 0.10));
 
         Assert.NotNull(mismatch);
         Assert.Contains("80%", mismatch, StringComparison.Ordinal);
         Assert.Contains("yellow", mismatch, StringComparison.Ordinal);
         Assert.Contains("Avocado", mismatch, StringComparison.Ordinal);
-        Assert.Contains("not fruit identity", mismatch, StringComparison.Ordinal);
+        Assert.Contains("not its identity", mismatch, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Accepts_a_green_image_declared_as_an_avocado()
     {
-        Assert.Null(new AvocadoProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.85, yellow: 0.05, brownDark: 0.10)));
+        Assert.Null(Mismatch(new AvocadoProcessor(), Colours(SupportedFruit.Avocado, green: 0.85, yellow: 0.05, brownDark: 0.10)));
     }
 
     [Fact]
     public void Accepts_a_dark_image_declared_as_an_avocado()
     {
-        Assert.Null(new AvocadoProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.20, yellow: 0.05, brownDark: 0.75)));
+        Assert.Null(Mismatch(new AvocadoProcessor(), Colours(SupportedFruit.Avocado, green: 0.20, yellow: 0.05, brownDark: 0.75)));
     }
 
     /// <summary>
@@ -60,8 +65,7 @@ public sealed class ColourMismatchTests
     [Fact]
     public void Tolerates_a_minority_of_off_profile_colour()
     {
-        Assert.Null(new AvocadoProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.55, yellow: 0.35, brownDark: 0.10)));
+        Assert.Null(Mismatch(new AvocadoProcessor(), Colours(SupportedFruit.Avocado, green: 0.55, yellow: 0.35, brownDark: 0.10)));
     }
 
     [Fact]
@@ -69,10 +73,8 @@ public sealed class ColourMismatchTests
     {
         var processor = new AvocadoProcessor();
 
-        Assert.Null(processor.DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.51, yellow: 0.49, brownDark: 0.0)));
-        Assert.NotNull(processor.DescribeColourMismatch(
-            Colours(SupportedFruit.Avocado, green: 0.49, yellow: 0.51, brownDark: 0.0)));
+        Assert.Null(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.51, yellow: 0.49, brownDark: 0.0)));
+        Assert.NotNull(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.49, yellow: 0.51, brownDark: 0.0)));
     }
 
     /// <summary>
@@ -86,8 +88,7 @@ public sealed class ColourMismatchTests
     [InlineData(0.0, 0.0, 1.0)]
     public void Never_flags_a_banana_whatever_the_colour(double green, double yellow, double brownDark)
     {
-        Assert.Null(new BananaProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Banana, green, yellow, brownDark)));
+        Assert.Null(Mismatch(new BananaProcessor(), Colours(SupportedFruit.Banana, green, yellow, brownDark)));
     }
 
     /// <summary>
@@ -98,8 +99,7 @@ public sealed class ColourMismatchTests
     [Fact]
     public void Cannot_detect_an_avocado_photo_declared_as_a_banana()
     {
-        Assert.Null(new BananaProcessor().DescribeColourMismatch(
-            Colours(SupportedFruit.Banana, green: 0.2, yellow: 0.0, brownDark: 0.8)));
+        Assert.Null(Mismatch(new BananaProcessor(), Colours(SupportedFruit.Banana, green: 0.2, yellow: 0.0, brownDark: 0.8)));
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public sealed class ColourMismatchTests
                 ["unripe"] = 0.1,
             });
 
-        Assert.Null(new AvocadoProcessor().DescribeColourMismatch(prediction));
+        Assert.Null(Mismatch(new AvocadoProcessor(), prediction));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class ColourMismatchTests
         var prediction = new VisionPrediction(
             SupportedFruit.Avocado, 0.5, new Dictionary<string, double>());
 
-        Assert.Null(new AvocadoProcessor().DescribeColourMismatch(prediction));
+        Assert.Null(Mismatch(new AvocadoProcessor(), prediction));
     }
 
     [Fact]

@@ -29,10 +29,9 @@ public interface IFruitProcessor
     Models.ColourProfile ColourProfile { get; }
 
     /// <summary>
-    /// A message for the operator when the image is dominated by a colour this
-    /// fruit never takes, or null when nothing contradicts the selection.
+    /// What limits the reading behind an assessment of this fruit, if anything.
     /// </summary>
-    string? DescribeColourMismatch(Models.VisionPrediction prediction);
+    Models.InspectionEvidence AssessEvidence(Models.VisionPrediction prediction);
 
     /// <summary>
     /// Evaluates a vision prediction and returns the merchandising assessment.

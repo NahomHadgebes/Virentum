@@ -17,7 +17,14 @@ namespace Virentum.Api.Domain.Models;
 /// The full set of model tag probabilities, keyed by tag name, for traceability
 /// and richer fruit-specific reasoning.
 /// </param>
+/// <param name="AnalysedShare">
+/// How much of the image actually produced a usable reading, 0 to 1, or null
+/// when the provider cannot say. A score derived from a sliver of the frame is
+/// not worth the same as one derived from most of it, and the difference has to
+/// travel with the score rather than be assumed away.
+/// </param>
 public sealed record VisionPrediction(
     SupportedFruit Fruit,
     double RipenessScore,
-    IReadOnlyDictionary<string, double> Tags);
+    IReadOnlyDictionary<string, double> Tags,
+    double? AnalysedShare = null);

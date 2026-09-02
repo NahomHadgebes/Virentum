@@ -10,7 +10,7 @@ const BASE: InspectionResponse = {
   commercialStatus: 'ReadyForSale',
   recommendation: 'Firm and ready for the premium produce section.',
   scannedAt: '2026-09-02T13:00:00+00:00',
-  colourMismatch: null,
+  evidence: { isReliable: true, concerns: [] },
 };
 
 function show(result: Partial<InspectionResponse>) {
@@ -30,7 +30,7 @@ describe('InspectionResult', () => {
     expect(screen.getByText(/Firm and ready for the premium produce section\./)).toBeDefined();
   });
 
-  it('shows no warning when the image is consistent with the selection', () => {
+  it('shows no warning when nothing limits the reading', () => {
     show({});
 
     expect(screen.queryByRole('alert')).toBeNull();
@@ -41,16 +41,21 @@ describe('InspectionResult', () => {
    * selection can be wrong. When it looks wrong, the advice below is answering
    * the wrong question — and the reader has to be told.
    */
-  it('surfaces a colour mismatch reported by the API', () => {
+  it('surfaces every concern the API raised', () => {
     show({
-      colourMismatch:
-        '80% of this image reads as yellow, which is unusual for Avocado. ' +
-        'Virentum measures colour, not fruit identity - check that the right fruit is selected.',
+      evidence: {
+        isReliable: false,
+        concerns: [
+          'Only 8% of this image held produce-like colour; the rest read as background.',
+          '70% of this image reads as yellow, which carries no ripeness meaning for Avocado.',
+        ],
+      },
     });
 
     expect(screen.getByRole('alert')).toBeDefined();
-    expect(screen.getByText(/80% of this image reads as yellow/)).toBeDefined();
-    expect(screen.getByText('Check the selected fruit')).toBeDefined();
+    expect(screen.getByText(/Only 8% of this image/)).toBeDefined();
+    expect(screen.getByText(/no ripeness meaning for Avocado/)).toBeDefined();
+    expect(screen.getByText('This reading may not be trustworthy')).toBeDefined();
   });
 
   /**
@@ -60,7 +65,7 @@ describe('InspectionResult', () => {
    */
   it('shows no warning when the API omitted the field entirely', () => {
     const withoutField = { ...BASE } as Partial<InspectionResponse>;
-    delete withoutField.colourMismatch;
+    delete withoutField.evidence;
 
     render(
       <MantineProvider>
@@ -72,14 +77,15 @@ describe('InspectionResult', () => {
     expect(screen.getByText('68%')).toBeDefined();
   });
 
-  it('shows no warning for a blank message', () => {
-    show({ colourMismatch: '   ' });
+  /** An unreliable verdict with no stated reason has nothing to show. */
+  it('shows no warning when the reading is unreliable but unexplained', () => {
+    show({ evidence: { isReliable: false, concerns: [] } });
 
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('still shows the assessment alongside the warning', () => {
-    show({ colourMismatch: 'Something is off.' });
+    show({ evidence: { isReliable: false, concerns: ['Something is off.'] } });
 
     expect(screen.getByText('68%')).toBeDefined();
     expect(screen.getByText(/Firm and ready/)).toBeDefined();

@@ -40,7 +40,40 @@ public abstract class FruitProcessor : IFruitProcessor
 
     public ColourProfile ColourProfile { get; }
 
-    public string? DescribeColourMismatch(VisionPrediction prediction)
+    /// <summary>
+    /// Below this share of the frame, the reading rests on too little of the
+    /// picture to stand on its own. A photograph that is mostly worktop or
+    /// packaging is not a measurement of produce.
+    /// </summary>
+    private const double MinimumAnalysedShare = 0.20;
+
+    public InspectionEvidence AssessEvidence(VisionPrediction prediction)
+    {
+        var concerns = new List<string>();
+
+        if (prediction.AnalysedShare is { } analysed && analysed < MinimumAnalysedShare)
+        {
+            var share = (analysed * 100d).ToString("F0", CultureInfo.InvariantCulture);
+            concerns.Add(
+                $"Only {share}% of this image held produce-like colour; the rest read as " +
+                "background. Fill more of the frame with the fruit and scan again.");
+        }
+
+        var mismatch = DescribeColourMismatch(prediction);
+        if (mismatch is not null)
+        {
+            concerns.Add(mismatch);
+        }
+
+        return InspectionEvidence.From(concerns);
+    }
+
+    /// <summary>
+    /// The image is dominated by a colour this fruit never takes, so either the
+    /// wrong fruit is selected or the photograph is not of the fruit's skin —
+    /// which is the surface the colour stage is a proxy for.
+    /// </summary>
+    private string? DescribeColourMismatch(VisionPrediction prediction)
     {
         // Only colour buckets are evidence here. A provider that reports
         // something else — the Custom Vision stub reports ripe/unripe — says
@@ -70,23 +103,12 @@ public abstract class FruitProcessor : IFruitProcessor
         }
 
         var dominant = offProfile.OrderByDescending(tag => tag.Value).First();
-
         var percent = (share * 100d).ToString("F0", CultureInfo.InvariantCulture);
 
         return $"{percent}% of this image reads as {ColourBuckets.Describe(dominant.Key)}, " +
-               $"which is unusual for {Fruit}. Virentum measures colour, not fruit " +
-               "identity - check that the right fruit is selected.";
-    }
-
-    public RipenessAssessment Assess(VisionPrediction prediction)
-    {
-        var ripenessPercent = ToPercent(prediction.RipenessScore);
-        var band = Bands.First(candidate => ripenessPercent <= candidate.MaxPercent);
-
-        return new RipenessAssessment(
-            ripenessPercent,
-            band.CommercialStatus,
-            band.DescribeFor(ripenessPercent));
+               $"which carries no ripeness meaning for {Fruit}. Virentum measures the colour " +
+               "of a fruit's skin, not its identity - check the selected fruit, and " +
+               "photograph the skin rather than cut flesh.";
     }
 
     /// <summary>A vision score is normalised [0, 1]; ripeness is a whole percent.</summary>

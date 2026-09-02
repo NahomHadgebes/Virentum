@@ -48,11 +48,18 @@ export interface InspectionResponse {
   /** DateTimeOffset, ISO 8601 with offset. */
   scannedAt: string;
   /**
-   * Set when the image is dominated by a colour the selected fruit never takes,
-   * null otherwise. The assessment is still valid on its own terms; this is a
-   * prompt to check the selection, not a rejection.
+   * How much weight this reading can carry. The assessment is always returned;
+   * this says whether to take it at face value. An unreliable reading must not
+   * be presented as a finding.
    */
-  colourMismatch: string | null;
+  evidence: InspectionEvidenceResponse;
+}
+
+/** Contracts/Responses/InspectionResponse.cs — InspectionEvidenceResponse */
+export interface InspectionEvidenceResponse {
+  isReliable: boolean;
+  /** Plain statements of what limits the reading. Empty when nothing does. */
+  concerns: string[];
 }
 
 /** Contracts/Responses/InspectionHistoryItem.cs */

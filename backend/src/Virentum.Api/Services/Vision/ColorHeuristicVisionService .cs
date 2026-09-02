@@ -44,7 +44,7 @@ public sealed class ColorHeuristicVisionService : IVisionService
                 Size = new Size(MaxAnalysisDimension, MaxAnalysisDimension),
             }));
 
-            long green = 0, yellow = 0, brown = 0;
+            long green = 0, yellow = 0, brown = 0, examined = 0;
 
             image.ProcessPixelRows(accessor =>
             {
@@ -52,6 +52,7 @@ public sealed class ColorHeuristicVisionService : IVisionService
                 {
                     foreach (ref readonly var px in accessor.GetRowSpan(y))
                     {
+                        examined++;
                         var (h, s, v) = RgbToHsv(px.R, px.G, px.B);
 
                         if (s < BackgroundSaturationFloor)
@@ -78,12 +79,19 @@ public sealed class ColorHeuristicVisionService : IVisionService
             var classified = green + yellow + brown;
             if (classified == 0)
             {
+                // Mid ripeness is not a measurement here, it is the absence of
+                // one. Reporting a zero analysed share is what stops the caller
+                // presenting it as a finding.
                 _logger.LogWarning(
-                    "Colour analysis found no fruit-like pixels for {Fruit}; defaulting to mid ripeness.",
-                    fruit);
+                    "Colour analysis found no fruit-like pixels for {Fruit}.", fruit);
                 return Task.FromResult(new VisionPrediction(
-                    fruit, 0.5d, new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)));
+                    fruit,
+                    0.5d,
+                    new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase),
+                    AnalysedShare: 0d));
             }
+
+            var analysedShare = examined == 0 ? 0d : (double)classified / examined;
 
             double greenFrac = (double)green / classified;
             double yellowFrac = (double)yellow / classified;
@@ -101,10 +109,11 @@ public sealed class ColorHeuristicVisionService : IVisionService
             };
 
             _logger.LogInformation(
-                "Colour analysis for {Fruit}: green={Green:P0} yellow={Yellow:P0} brown/dark={Brown:P0} => score {Score:F2}",
-                fruit, greenFrac, yellowFrac, brownFrac, score);
+                "Colour analysis for {Fruit}: green={Green:P0} yellow={Yellow:P0} " +
+                "brown/dark={Brown:P0} => score {Score:F2} (analysed {Analysed:P0} of the frame)",
+                fruit, greenFrac, yellowFrac, brownFrac, score, analysedShare);
 
-            return Task.FromResult(new VisionPrediction(fruit, score, tags));
+            return Task.FromResult(new VisionPrediction(fruit, score, tags, analysedShare));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

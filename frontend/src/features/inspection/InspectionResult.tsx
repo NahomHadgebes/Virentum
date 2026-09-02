@@ -1,4 +1,4 @@
-import { Alert, Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Card, Group, List, Stack, Text, Title } from '@mantine/core';
 import type { InspectionResponse } from '../../types/contracts';
 import { presentStatus } from '../../status/statusPresentation';
 import { RipenessBar } from './RipenessBar';
@@ -12,10 +12,12 @@ const TIMESTAMP_FORMAT = new Intl.DateTimeFormat(undefined, {
 export function InspectionResult({ result }: { result: InspectionResponse }) {
   const status = presentStatus(result.commercialStatus);
 
-  // An API without this field sends nothing rather than null, and
-  // `undefined !== null` is true — which rendered a warning box with no message
-  // in it. Only an actual message counts as a mismatch.
-  const mismatch = result.colourMismatch?.trim() ?? '';
+  // An API without this field sends nothing rather than a value, and a missing
+  // object must not read as "reliable" — that would be the app inventing
+  // confidence the server never expressed. Absent concerns mean nothing to show;
+  // absent evidence means nothing to claim either way.
+  const concerns = result.evidence?.concerns ?? [];
+  const unreliable = result.evidence !== undefined && !result.evidence.isReliable;
 
   return (
     <Card withBorder padding="lg" radius="md">
@@ -29,9 +31,18 @@ export function InspectionResult({ result }: { result: InspectionResponse }) {
 
         {/* Shown above the advice: if the wrong fruit was selected, the advice
             below it is answering the wrong question. */}
-        {mismatch !== '' && (
-          <Alert color="yellow" variant="light" title="Check the selected fruit" role="alert">
-            <Text size="sm">{mismatch}</Text>
+        {unreliable && concerns.length > 0 && (
+          <Alert
+            color="yellow"
+            variant="light"
+            title="This reading may not be trustworthy"
+            role="alert"
+          >
+            <List size="sm" spacing={4} withPadding>
+              {concerns.map((concern) => (
+                <List.Item key={concern}>{concern}</List.Item>
+              ))}
+            </List>
           </Alert>
         )}
 

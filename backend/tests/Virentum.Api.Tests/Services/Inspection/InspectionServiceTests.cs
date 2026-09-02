@@ -180,26 +180,28 @@ public sealed class InspectionServiceTests
     }
 
     /// <summary>
-    /// The colour heuristic reports buckets, so a real scan can carry a
-    /// mismatch. The stub reports none, which is why these two cases differ.
+    /// The stub reports no colour buckets and no coverage, so nothing limits the
+    /// reading and the response says so.
     /// </summary>
     [Fact]
-    public async Task Reports_no_colour_mismatch_when_the_provider_measured_no_colour()
+    public async Task Reports_a_reliable_reading_when_nothing_limits_it()
     {
         var response = await ScanAsync(FileOf("image/png"), SupportedFruit.Avocado, 0.5);
 
-        Assert.Null(response.ColourMismatch);
+        Assert.True(response.Evidence.IsReliable);
     }
 
     [Fact]
-    public async Task Passes_a_colour_mismatch_through_without_blocking_the_assessment()
+    public async Task Passes_an_unreliable_reading_through_without_blocking_the_assessment()
     {
         var yellowImage = new ColourReportingVisionService(green: 0.1, yellow: 0.85, brownDark: 0.05);
 
         var response = await ScanAsync(FileOf("image/png"), SupportedFruit.Avocado, vision: yellowImage);
 
-        Assert.NotNull(response.ColourMismatch);
-        Assert.Contains("Avocado", response.ColourMismatch, StringComparison.Ordinal);
+        Assert.False(response.Evidence.IsReliable);
+        Assert.Contains(
+            response.Evidence.Concerns,
+            concern => concern.Contains("Avocado", StringComparison.Ordinal));
         // The scan still produced a verdict and was still recorded.
         Assert.Equal(SupportedFruit.Avocado, response.FruitType);
         Assert.Single(_repository.Saved);
@@ -223,7 +225,7 @@ public sealed class InspectionServiceTests
             SupportedFruit fruit,
             byte[] imageBytes,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(new VisionPrediction(fruit, 0.6, _tags));
+            Task.FromResult(new VisionPrediction(fruit, 0.6, _tags, AnalysedShare: 0.7));
     }
 
     [Fact]
