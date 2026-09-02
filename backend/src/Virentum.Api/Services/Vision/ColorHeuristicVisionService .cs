@@ -29,52 +29,24 @@ public sealed class ColorHeuristicVisionService : IVisionService
 
     public Task<VisionPrediction> AnalyseAsync(
         SupportedFruit fruit,
-        byte[] imageBytes,
+        IReadOnlyList<byte[]> images,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentOutOfRangeException.ThrowIfZero(images.Count);
 
         try
         {
-            using var image = Image.Load<Rgb24>(imageBytes);
-
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Mode = ResizeMode.Max,
-                Size = new Size(MaxAnalysisDimension, MaxAnalysisDimension),
-            }));
-
+            // Pixel counts are pooled across every photograph before any
+            // fraction is taken, so an extra angle adds evidence rather than
+            // averaging two separate verdicts together.
             long green = 0, yellow = 0, brown = 0, examined = 0;
 
-            image.ProcessPixelRows(accessor =>
+            foreach (var imageBytes in images)
             {
-                for (var y = 0; y < accessor.Height; y++)
-                {
-                    foreach (ref readonly var px in accessor.GetRowSpan(y))
-                    {
-                        examined++;
-                        var (h, s, v) = RgbToHsv(px.R, px.G, px.B);
-
-                        if (s < BackgroundSaturationFloor)
-                        {
-                            continue; // background-ish pixel
-                        }
-
-                        if (v < 0.30f || (h >= 12f && h < 45f && v < 0.65f))
-                        {
-                            brown++;            // dark or brown ⇒ overripe
-                        }
-                        else if (h >= 42f && h < 72f)
-                        {
-                            yellow++;           // yellow ⇒ ripe
-                        }
-                        else if (h >= 70f && h < 175f)
-                        {
-                            green++;            // green ⇒ unripe
-                        }
-                    }
-                }
-            });
+                cancellationToken.ThrowIfCancellationRequested();
+                Accumulate(imageBytes, ref green, ref yellow, ref brown, ref examined);
+            }
 
             var classified = green + yellow + brown;
             if (classified == 0)
@@ -83,16 +55,18 @@ public sealed class ColorHeuristicVisionService : IVisionService
                 // one. Reporting a zero analysed share is what stops the caller
                 // presenting it as a finding.
                 _logger.LogWarning(
-                    "Colour analysis found no fruit-like pixels for {Fruit}.", fruit);
+                    "Colour analysis found no fruit-like pixels for {Fruit} across {Count} image(s).",
+                    fruit,
+                    images.Count);
                 return Task.FromResult(new VisionPrediction(
                     fruit,
                     0.5d,
                     new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase),
-                    AnalysedShare: 0d));
+                    AnalysedShare: 0d,
+                    ImageCount: images.Count));
             }
 
             var analysedShare = examined == 0 ? 0d : (double)classified / examined;
-
             double greenFrac = (double)green / classified;
             double yellowFrac = (double)yellow / classified;
             double brownFrac = (double)brown / classified;
@@ -109,17 +83,75 @@ public sealed class ColorHeuristicVisionService : IVisionService
             };
 
             _logger.LogInformation(
-                "Colour analysis for {Fruit}: green={Green:P0} yellow={Yellow:P0} " +
-                "brown/dark={Brown:P0} => score {Score:F2} (analysed {Analysed:P0} of the frame)",
-                fruit, greenFrac, yellowFrac, brownFrac, score, analysedShare);
+                "Colour analysis for {Fruit} over {Count} image(s): green={Green:P0} " +
+                "yellow={Yellow:P0} brown/dark={Brown:P0} => score {Score:F2} " +
+                "(analysed {Analysed:P0} of the frames)",
+                fruit, images.Count, greenFrac, yellowFrac, brownFrac, score, analysedShare);
 
-            return Task.FromResult(new VisionPrediction(fruit, score, tags, analysedShare));
+            return Task.FromResult(new VisionPrediction(
+                fruit, score, tags, analysedShare, images.Count));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Failed to analyse uploaded image for {Fruit}.", fruit);
-            throw new VisionAnalysisException("The uploaded image could not be analysed.", ex);
+            _logger.LogError(ex, "Failed to analyse uploaded imagery for {Fruit}.", fruit);
+            throw new VisionAnalysisException("The uploaded images could not be analysed.", ex);
         }
+    }
+
+    /// <summary>Adds one photograph's pixel counts to the running totals.</summary>
+    private static void Accumulate(
+        byte[] imageBytes,
+        ref long green,
+        ref long yellow,
+        ref long brown,
+        ref long examined)
+    {
+        using var image = Image.Load<Rgb24>(imageBytes);
+
+        image.Mutate(x => x.Resize(new ResizeOptions
+        {
+            Mode = ResizeMode.Max,
+            Size = new Size(MaxAnalysisDimension, MaxAnalysisDimension),
+        }));
+
+        // ProcessPixelRows takes a delegate, which cannot close over ref
+        // parameters, so the counts are gathered locally and added afterwards.
+        long localGreen = 0, localYellow = 0, localBrown = 0, localExamined = 0;
+
+        image.ProcessPixelRows(accessor =>
+        {
+            for (var y = 0; y < accessor.Height; y++)
+            {
+                foreach (ref readonly var px in accessor.GetRowSpan(y))
+                {
+                    localExamined++;
+                    var (h, s, v) = RgbToHsv(px.R, px.G, px.B);
+
+                    if (s < BackgroundSaturationFloor)
+                    {
+                        continue; // background-ish pixel
+                    }
+
+                    if (v < 0.30f || (h >= 12f && h < 45f && v < 0.65f))
+                    {
+                        localBrown++;       // dark or brown ⇒ overripe
+                    }
+                    else if (h >= 42f && h < 72f)
+                    {
+                        localYellow++;      // yellow ⇒ ripe
+                    }
+                    else if (h >= 70f && h < 175f)
+                    {
+                        localGreen++;       // green ⇒ unripe
+                    }
+                }
+            }
+        });
+
+        green += localGreen;
+        yellow += localYellow;
+        brown += localBrown;
+        examined += localExamined;
     }
 
     /// <summary>Converts an sRGB pixel to HSV (H in degrees 0–360, S/V in 0–1).</summary>

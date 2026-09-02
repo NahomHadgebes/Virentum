@@ -10,10 +10,14 @@ import { get, post } from './client';
 export function scan(request: ScanRequest): Promise<InspectionResponse> {
   const form = new FormData();
 
-  // Field names must match Contracts/Requests/ScanRequest.cs. Form binding
-  // resolves FruitType from the enum member name.
-  form.append('Image', request.image);
+  // Field names must match Contracts/Requests/ScanRequest.cs. Repeating the
+  // Images key is how a form binds to IFormFileCollection; the enums bind from
+  // their member names.
+  for (const image of request.images) {
+    form.append('Images', image);
+  }
   form.append('FruitType', request.fruitType);
+  form.append('Audience', request.audience);
 
   return post<InspectionResponse>({
     path: '/api/inspection/scan',

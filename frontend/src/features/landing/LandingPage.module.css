@@ -1,0 +1,89 @@
+.page {
+  min-height: 100vh;
+}
+
+.topBar {
+  border-bottom: 1px solid var(--app-hairline);
+}
+
+/* A leaf-ish mark built from two radii — no icon dependency for one glyph. */
+.mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 70% 0 70% 0;
+  background: linear-gradient(140deg, var(--mantine-color-virentum-5), var(--mantine-color-virentum-8));
+}
+
+.choices {
+  display: grid;
+  gap: var(--mantine-spacing-lg);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48em) {
+  .choices {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.choice {
+  padding: var(--mantine-spacing-xl);
+  border: 1px solid var(--app-hairline);
+  border-radius: var(--mantine-radius-xl);
+  background: var(--app-card);
+  box-shadow: var(--mantine-shadow-xs);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  height: 100%;
+}
+
+.choice:hover,
+.choice:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--mantine-shadow-md);
+  border-color: var(--mantine-color-virentum-4);
+}
+
+.glyph {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--mantine-radius-lg);
+  background: var(--mantine-color-sand-1);
+}
+
+:root[data-mantine-color-scheme='dark'] .glyph {
+  background: var(--mantine-color-dark-6);
+}
+
+/* Examples read as quoted questions rather than as a feature list. */
+.example::before {
+  content: '“';
+  opacity: 0.5;
+}
+
+.example::after {
+  content: '”';
+  opacity: 0.5;
+}
+
+.cta {
+  color: var(--mantine-color-virentum-7);
+}
+
+:root[data-mantine-color-scheme='dark'] .cta {
+  color: var(--mantine-color-virentum-4);
+}
+
+.arrow {
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.choice:hover .arrow,
+.choice:focus-visible .arrow {
+  transform: translateX(4px);
+}

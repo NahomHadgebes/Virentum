@@ -14,7 +14,8 @@ public sealed class AvocadoProcessorTests
 {
     private static RipenessAssessment Assess(double score) =>
         new AvocadoProcessor().Assess(
-            new VisionPrediction(SupportedFruit.Avocado, score, new Dictionary<string, double>()));
+            new VisionPrediction(SupportedFruit.Avocado, score, new Dictionary<string, double>()),
+            Audience.Consumer);
 
     [Fact]
     public void Declares_the_fruit_it_handles()
@@ -65,8 +66,8 @@ public sealed class AvocadoProcessorTests
         var prediction = new VisionPrediction(
             SupportedFruit.Avocado, 0.80, new Dictionary<string, double>());
 
-        Assert.Equal(CommercialStatus.ReadyForSale, new AvocadoProcessor().Assess(prediction).CommercialStatus);
-        Assert.Equal(CommercialStatus.ActionRequired, new BananaProcessor().Assess(prediction).CommercialStatus);
+        Assert.Equal(CommercialStatus.ReadyForSale, new AvocadoProcessor().Assess(prediction, Audience.Consumer).CommercialStatus);
+        Assert.Equal(CommercialStatus.ActionRequired, new BananaProcessor().Assess(prediction, Audience.Consumer).CommercialStatus);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Virentum.Api.Contracts.Requests;
 using Virentum.Api.Contracts.Responses;
 using Virentum.Api.Domain.Models;
@@ -18,6 +19,13 @@ public sealed class InspectionService : IInspectionService
 {
     // Reject anything larger than this before touching the vision provider.
     private const int MaxImageBytes = 8 * 1024 * 1024; // 8 MB
+
+    /// <summary>
+    /// More angles is more evidence, but the pooled reading stops improving
+    /// long before the upload cost does. Three is enough for skin, a second
+    /// angle and the inside.
+    /// </summary>
+    private const int MaxImages = 3;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -52,14 +60,14 @@ public sealed class InspectionService : IInspectionService
         string storeId,
         CancellationToken cancellationToken = default)
     {
-        var imageBytes = await ReadAndValidateImageAsync(request, cancellationToken);
+        var images = await ReadAndValidateImagesAsync(request, cancellationToken);
 
-        // 1. Vision: vendor-neutral prediction.
-        var prediction = await _vision.AnalyseAsync(request.FruitType, imageBytes, cancellationToken);
+        // 1. Vision: vendor-neutral prediction, pooled across every photograph.
+        var prediction = await _vision.AnalyseAsync(request.FruitType, images, cancellationToken);
 
         // 2. Strategy: the factory yields the right processor with zero branching here.
         var processor = _processorFactory.Create(request.FruitType);
-        RipenessAssessment assessment = processor.Assess(prediction);
+        RipenessAssessment assessment = processor.Assess(prediction, request.Audience);
 
         // The colour stage is a heuristic. What it had to work with travels with
         // the result so the client never presents a thin reading as a finding.
@@ -87,18 +95,27 @@ public sealed class InspectionService : IInspectionService
         await _repository.AddAsync(record, cancellationToken);
 
         _logger.LogInformation(
-            "Inspection completed for store {StoreId}: {Fruit} at {Ripeness}% ⇒ {Status}",
+            "Inspection completed for store {StoreId}: {Fruit} at {Ripeness}% over {Images} image(s) => {Status}",
             storeId,
             request.FruitType,
             assessment.RipenessPercent,
+            images.Count,
             assessment.CommercialStatus);
 
-        // 4. Map entity/domain to the client DTO.
+        // 4. Map to the client DTO.
         return new InspectionResponse(
             record.FruitType,
-            record.RipenessPercent,
-            record.CommercialStatus,
-            record.Recommendation,
+            request.Audience,
+            assessment.RipenessPercent,
+            assessment.StageName,
+            assessment.Appearance,
+            assessment.CommercialStatus,
+            assessment.Edibility,
+            assessment.Recommendation,
+            assessment.Factors
+                .Select(factor => new AnalysisFactorResponse(factor.Label, factor.Share, factor.Meaning))
+                .ToList(),
+            prediction.ImageCount,
             record.ScannedAt,
             new InspectionEvidenceResponse(evidence.IsReliable, evidence.Concerns));
     }
@@ -152,29 +169,61 @@ public sealed class InspectionService : IInspectionService
             .Select(member => project(member, counts.TryGetValue(member, out var count) ? count : 0))
             .ToList();
 
-    private static async Task<byte[]> ReadAndValidateImageAsync(
+    /// <summary>
+    /// Validates every supplied photograph before any of them reaches the vision
+    /// provider. One bad file fails the whole scan rather than being dropped
+    /// quietly: an operator who attached three pictures should not receive a
+    /// verdict silently based on two.
+    /// </summary>
+    private static async Task<IReadOnlyList<byte[]>> ReadAndValidateImagesAsync(
         ScanRequest request,
         CancellationToken cancellationToken)
     {
-        if (request.Image is null || request.Image.Length == 0)
+        var files = request.Images;
+
+        if (files is null || files.Count == 0)
+        {
+            throw new InvalidInspectionRequestException("At least one image is required.");
+        }
+
+        if (files.Count > MaxImages)
+        {
+            throw new InvalidInspectionRequestException(
+                $"At most {MaxImages} images can be analysed together; {files.Count} were sent.");
+        }
+
+        var images = new List<byte[]>(files.Count);
+        foreach (var file in files)
+        {
+            images.Add(await ReadAndValidateImageAsync(file, cancellationToken));
+        }
+
+        return images;
+    }
+
+    private static async Task<byte[]> ReadAndValidateImageAsync(
+        IFormFile? image,
+        CancellationToken cancellationToken)
+    {
+        if (image is null || image.Length == 0)
         {
             throw new InvalidInspectionRequestException("An image file is required.");
         }
 
-        if (request.Image.Length > MaxImageBytes)
+        if (image.Length > MaxImageBytes)
         {
             throw new InvalidInspectionRequestException(
                 $"Image exceeds the {MaxImageBytes / (1024 * 1024)} MB limit.");
         }
 
-        if (!AllowedContentTypes.Contains(request.Image.ContentType))
+        if (!AllowedContentTypes.Contains(image.ContentType))
         {
             throw new InvalidInspectionRequestException(
-                $"Unsupported image content type '{request.Image.ContentType}'.");
+                $"Unsupported image content type '{image.ContentType}'.");
         }
 
         using var buffer = new MemoryStream();
-        await request.Image.CopyToAsync(buffer, cancellationToken);
+        await image.CopyToAsync(buffer, cancellationToken);
         return buffer.ToArray();
     }
 }

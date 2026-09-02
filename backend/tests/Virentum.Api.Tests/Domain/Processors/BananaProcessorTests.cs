@@ -14,7 +14,8 @@ public sealed class BananaProcessorTests
 {
     private static RipenessAssessment Assess(double score) =>
         new BananaProcessor().Assess(
-            new VisionPrediction(SupportedFruit.Banana, score, new Dictionary<string, double>()));
+            new VisionPrediction(SupportedFruit.Banana, score, new Dictionary<string, double>()),
+            Audience.Consumer);
 
     [Fact]
     public void Declares_the_fruit_it_handles()

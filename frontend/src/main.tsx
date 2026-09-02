@@ -7,6 +7,7 @@ import '@mantine/dropzone/styles.css';
 import './theme.css';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
+import { AudienceProvider } from './audience/AudienceContext';
 import { theme } from './theme';
 
 const container = document.getElementById('root');
@@ -20,7 +21,9 @@ createRoot(container).render(
     <MantineProvider theme={theme} defaultColorScheme="auto">
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <AudienceProvider>
+            <App />
+          </AudienceProvider>
         </AuthProvider>
       </BrowserRouter>
     </MantineProvider>

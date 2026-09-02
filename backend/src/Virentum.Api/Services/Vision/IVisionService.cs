@@ -17,8 +17,13 @@ public interface IVisionService
     /// <exception cref="Exceptions.VisionAnalysisException">
     /// Thrown when the provider cannot be reached or returns an unusable result.
     /// </exception>
+    /// <param name="images">
+    /// One to three photographs of the same item. Evidence is pooled across all
+    /// of them rather than taken from the first, so a second angle or a picture
+    /// of the inside genuinely strengthens the reading.
+    /// </param>
     Task<VisionPrediction> AnalyseAsync(
         SupportedFruit fruit,
-        byte[] imageBytes,
+        IReadOnlyList<byte[]> images,
         CancellationToken cancellationToken = default);
 }

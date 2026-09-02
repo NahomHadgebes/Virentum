@@ -27,9 +27,14 @@ public sealed class AzureCustomVisionService : IVisionService
 
     public async Task<VisionPrediction> AnalyseAsync(
         SupportedFruit fruit,
-        byte[] imageBytes,
+        IReadOnlyList<byte[]> images,
         CancellationToken cancellationToken = default)
     {
+        // Custom Vision scores one image per call. The first is the primary
+        // view; pooling several would need a trained model that accepts them,
+        // and pretending otherwise would overstate what was analysed.
+        var imageBytes = images[0];
+
         if (_options.UseStub)
         {
             return BuildDeterministicStub(fruit, imageBytes);

@@ -65,7 +65,8 @@ public sealed class FruitProcessorFactoryTests
         foreach (var fruit in Enum.GetValues<SupportedFruit>())
         {
             var assessment = factory.Create(fruit).Assess(
-                new VisionPrediction(fruit, 0.5, new Dictionary<string, double>()));
+                new VisionPrediction(fruit, 0.5, new Dictionary<string, double>()),
+                Audience.Consumer);
 
             Assert.False(string.IsNullOrWhiteSpace(assessment.Recommendation));
         }

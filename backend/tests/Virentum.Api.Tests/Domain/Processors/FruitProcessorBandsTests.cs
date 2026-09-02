@@ -17,13 +17,18 @@ public sealed class FruitProcessorBandsTests
     private sealed class TestProcessor : FruitProcessor
     {
         public TestProcessor(params RipenessBand[] bands)
-            : base(SupportedFruit.Banana, bands, ColourProfile.Of(ColourBuckets.Green))
+            : base(
+                SupportedFruit.Banana,
+                bands,
+                ColourProfile.Of(ColourBuckets.Green),
+                new Dictionary<string, string>())
         {
         }
     }
 
     private static RipenessBand Band(int min, int max) =>
-        new(min, max, CommercialStatus.ReadyForSale, "Fine.");
+        new(min, max, CommercialStatus.ReadyForSale, EdibilityVerdict.Good,
+            "Stage", "Looks fine.", "#888888", "Fine.", "Fine.");
 
     [Fact]
     public void Accepts_bands_that_cover_zero_through_one_hundred()
@@ -69,7 +74,10 @@ public sealed class FruitProcessorBandsTests
     public void Rejects_a_band_that_ends_before_it_starts()
     {
         Assert.Throws<ArgumentException>(
-            () => new TestProcessor(Band(0, 50), new RipenessBand(51, 40, CommercialStatus.Expired, "x")));
+            () => new TestProcessor(
+                Band(0, 50),
+                new RipenessBand(51, 40, CommercialStatus.Expired, EdibilityVerdict.DoNotEat,
+                    "Stage", "Looks off.", "#333333", "x", "x")));
     }
 
     [Fact]
@@ -111,26 +119,34 @@ public sealed class FruitProcessorBandsTests
 
         foreach (var band in processors.SelectMany(processor => processor.Bands))
         {
-            var described = band.DescribeFor(band.MinPercent);
+            var described = band.DescribeFor(band.MinPercent, Audience.Business);
 
             Assert.False(string.IsNullOrWhiteSpace(described));
             Assert.DoesNotContain("{0}", described, StringComparison.Ordinal);
+            Assert.False(string.IsNullOrWhiteSpace(band.StageName));
+            Assert.False(string.IsNullOrWhiteSpace(band.Appearance));
+            Assert.StartsWith("#", band.SwatchHex, StringComparison.Ordinal);
         }
     }
 
     [Fact]
     public void Substitutes_the_measured_percent_into_a_templated_band()
     {
-        var band = new RipenessBand(0, 100, CommercialStatus.ActionRequired, "Ripe at {0}%.");
+        var band = new RipenessBand(0, 100, CommercialStatus.ActionRequired, EdibilityVerdict.EatSoon,
+            "Stage", "Looks soft.", "#aa8844", "Ripe at {0}%.", "Eat it at {0}%.");
 
-        Assert.Equal("Ripe at 77%.", band.DescribeFor(77));
+        Assert.Equal("Ripe at 77%.", band.DescribeFor(77, Audience.Business));
+        Assert.Equal("Eat it at 77%.", band.DescribeFor(77, Audience.Consumer));
     }
 
+    /// <summary>The same stage, two readers, two sentences from one source.</summary>
     [Fact]
-    public void Leaves_a_band_without_a_placeholder_untouched()
+    public void Words_the_same_stage_differently_for_each_audience()
     {
-        var band = new RipenessBand(0, 100, CommercialStatus.ReadyForSale, "Prime shelf.");
+        var band = new RipenessBand(0, 100, CommercialStatus.ReadyForSale, EdibilityVerdict.Good,
+            "Prime", "Even colour.", "#ffd54f", "Front shelf, full price.", "Ready to eat.");
 
-        Assert.Equal("Prime shelf.", band.DescribeFor(50));
+        Assert.Equal("Front shelf, full price.", band.DescribeFor(50, Audience.Business));
+        Assert.Equal("Ready to eat.", band.DescribeFor(50, Audience.Consumer));
     }
 }

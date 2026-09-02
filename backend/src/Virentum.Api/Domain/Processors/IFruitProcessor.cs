@@ -34,7 +34,8 @@ public interface IFruitProcessor
     Models.InspectionEvidence AssessEvidence(Models.VisionPrediction prediction);
 
     /// <summary>
-    /// Evaluates a vision prediction and returns the merchandising assessment.
+    /// Evaluates a vision prediction and returns the assessment, worded for the
+    /// audience that asked.
     /// </summary>
-    RipenessAssessment Assess(VisionPrediction prediction);
+    RipenessAssessment Assess(VisionPrediction prediction, Audience audience);
 }

@@ -1,18 +1,114 @@
 /*
+ * Self-hosted variable fonts. One file per family covers every weight the design
+ * uses, and font-display: swap means text is readable before they land.
+ */
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/fraunces-latin.woff2') format('woff2-variations');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-latin.woff2') format('woff2-variations');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * App-level styling that belongs to no single component: the page ground, the
+ * dimmed-text correction, and the motion primitives the interface reuses.
+ */
+
+/*
  * Mantine's default "dimmed" is gray-6 in light and dark-2 in dark. Measured
- * against the surfaces this app actually uses, both land near 3.3:1 — below the
- * 4.5:1 WCAG AA needs for text at these sizes. One step further from the
- * background clears it without flattening the visual hierarchy.
- *
- * The selectors match Mantine's own so specificity ties and source order wins;
- * a plain :root here loses to :root[data-mantine-color-scheme='...'].
+ * against the surfaces this app uses, both land near 3.3:1 — below the 4.5:1
+ * WCAG AA needs at these sizes. The selectors match Mantine's own so specificity
+ * ties and source order wins; a plain :root loses.
  */
 :root[data-mantine-color-scheme='light'],
 :host([data-mantine-color-scheme='light']) {
-  --mantine-color-dimmed: var(--mantine-color-gray-7);
+  --mantine-color-dimmed: var(--mantine-color-sand-8);
+  --app-ground: radial-gradient(
+      1200px 600px at 12% -8%,
+      var(--mantine-color-virentum-0) 0%,
+      transparent 62%
+    ),
+    radial-gradient(900px 500px at 96% 0%, var(--mantine-color-amber-0) 0%, transparent 58%),
+    var(--mantine-color-sand-0);
+  --app-hairline: var(--mantine-color-sand-2);
+  --app-card: #ffffff;
 }
 
 :root[data-mantine-color-scheme='dark'],
 :host([data-mantine-color-scheme='dark']) {
   --mantine-color-dimmed: var(--mantine-color-dark-1);
+  --app-ground: radial-gradient(
+      1100px 560px at 10% -10%,
+      rgba(63, 148, 89, 0.16) 0%,
+      transparent 60%
+    ),
+    radial-gradient(900px 500px at 98% -4%, rgba(239, 176, 41, 0.1) 0%, transparent 58%),
+    var(--mantine-color-dark-8);
+  --app-hairline: var(--mantine-color-dark-4);
+  --app-card: var(--mantine-color-dark-7);
+}
+
+body {
+  background: var(--app-ground);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numerals that line up in columns and gauges. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrance used by results and cards as they arrive. */
+@keyframes app-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: app-rise var(--app-motion-base, 260ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Slow shimmer for skeletons, calmer than a spinner. */
+@keyframes app-sheen {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

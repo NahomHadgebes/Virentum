@@ -33,6 +33,21 @@ public sealed class ColourMismatchTests
         // Ample coverage, so only the colour-profile concern can fire here.
         AnalysedShare: 0.8);
 
+    /// <summary>
+    /// The measurement that set the threshold: a photograph of a cut avocado,
+    /// whose pale flesh read 49% yellow. At the old 0.5 the check stayed silent
+    /// on exactly the picture it exists for.
+    /// </summary>
+    [Fact]
+    public void Flags_the_cut_avocado_that_measured_forty_nine_percent_yellow()
+    {
+        var mismatch = Mismatch(new AvocadoProcessor(),
+            Colours(SupportedFruit.Avocado, green: 0.00, yellow: 0.49, brownDark: 0.51));
+
+        Assert.NotNull(mismatch);
+        Assert.Contains("photograph the skin", mismatch, StringComparison.Ordinal);
+    }
+
     /// <summary>The case that prompted this: a photo of bananas, filed as avocado.</summary>
     [Fact]
     public void Flags_a_yellow_image_declared_as_an_avocado()
@@ -43,7 +58,7 @@ public sealed class ColourMismatchTests
         Assert.Contains("80%", mismatch, StringComparison.Ordinal);
         Assert.Contains("yellow", mismatch, StringComparison.Ordinal);
         Assert.Contains("Avocado", mismatch, StringComparison.Ordinal);
-        Assert.Contains("not its identity", mismatch, StringComparison.Ordinal);
+        Assert.Contains("reads the colour of a", mismatch, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -69,12 +84,12 @@ public sealed class ColourMismatchTests
     }
 
     [Fact]
-    public void Flags_only_once_the_off_profile_share_passes_half()
+    public void Flags_once_the_off_profile_share_passes_the_threshold()
     {
         var processor = new AvocadoProcessor();
 
-        Assert.Null(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.51, yellow: 0.49, brownDark: 0.0)));
-        Assert.NotNull(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.49, yellow: 0.51, brownDark: 0.0)));
+        Assert.Null(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.56, yellow: 0.44, brownDark: 0.0)));
+        Assert.NotNull(Mismatch(processor, Colours(SupportedFruit.Avocado, green: 0.54, yellow: 0.46, brownDark: 0.0)));
     }
 
     /// <summary>

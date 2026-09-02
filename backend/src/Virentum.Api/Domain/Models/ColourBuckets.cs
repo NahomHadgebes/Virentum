@@ -2,12 +2,9 @@ namespace Virentum.Api.Domain.Models;
 
 /// <summary>
 /// The colour buckets a vision provider may report in
-/// <see cref="VisionPrediction.Tags"/>.
-///
-/// These names were previously written as literals in the colour-analysis
-/// service and read by nobody. Naming them here lets a fruit declare which of
-/// them it can legitimately present, which is what makes it possible to notice
-/// that a picture contradicts the fruit the operator selected.
+/// <see cref="VisionPrediction.Tags"/>. Naming them here lets a fruit declare
+/// which of them it can legitimately present, and lets the API explain a verdict
+/// in terms the reader can check against their own photograph.
 /// </summary>
 public static class ColourBuckets
 {
@@ -19,7 +16,7 @@ public static class ColourBuckets
     public static IReadOnlySet<string> All { get; } =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Green, Yellow, BrownDark };
 
-    /// <summary>The bucket written for a human, for use in operator-facing copy.</summary>
+    /// <summary>The bucket written for a human.</summary>
     public static string Describe(string bucket) => bucket.ToLowerInvariant() switch
     {
         "green" => "green",

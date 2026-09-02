@@ -21,13 +21,20 @@ internal sealed class StubVisionService : IVisionService
     /// <summary>Set when AnalyseAsync is reached, so a test can assert it was not.</summary>
     public bool WasCalled { get; private set; }
 
+    /// <summary>How many photographs the last call pooled.</summary>
+    public int ImagesReceived { get; private set; }
+
     public Task<VisionPrediction> AnalyseAsync(
         SupportedFruit fruit,
-        byte[] imageBytes,
+        IReadOnlyList<byte[]> images,
         CancellationToken cancellationToken = default)
     {
         WasCalled = true;
-        return Task.FromResult(
-            new VisionPrediction(fruit, _ripenessScore, new Dictionary<string, double>()));
+        ImagesReceived = images.Count;
+        return Task.FromResult(new VisionPrediction(
+            fruit,
+            _ripenessScore,
+            new Dictionary<string, double>(),
+            ImageCount: images.Count));
     }
 }

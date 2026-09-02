@@ -1,34 +1,42 @@
-import { Tabs } from '@mantine/core';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Box } from '@mantine/core';
+import { NavLink } from 'react-router-dom';
+import { useAudience } from '../audience/useAudience';
+import classes from './AppNav.module.css';
 
-/** Route path to tab label. The path is the tab value, so no second mapping. */
-const TABS: ReadonlyArray<{ path: string; label: string }> = [
-  { path: '/', label: 'Inspect' },
-  { path: '/history', label: 'History' },
-  { path: '/dashboard', label: 'Dashboard' },
-  { path: '/fruits', label: 'Fruit guide' },
+interface Tab {
+  path: string;
+  label: string;
+  /** Business-only pages: a shopper has no store history to look at. */
+  businessOnly?: boolean;
+}
+
+const TABS: readonly Tab[] = [
+  { path: '/scan', label: 'Scan' },
+  { path: '/guide', label: 'Fruit guide' },
+  { path: '/history', label: 'History', businessOnly: true },
+  { path: '/dashboard', label: 'Dashboard', businessOnly: true },
 ];
 
+/**
+ * The navigation follows the audience: per-store history and a weekly dashboard
+ * are not questions a shopper has, and showing them would imply the app is
+ * something they need to manage.
+ */
 export function AppNav() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { audience } = useAudience();
+  const visible = TABS.filter((tab) => tab.businessOnly !== true || audience === 'Business');
 
   return (
-    <Tabs
-      value={location.pathname}
-      onChange={(path) => {
-        if (path !== null) {
-          void navigate(path);
-        }
-      }}
-    >
-      <Tabs.List>
-        {TABS.map((tab) => (
-          <Tabs.Tab key={tab.path} value={tab.path}>
-            {tab.label}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
-    </Tabs>
+    <Box component="nav" className={classes.nav} aria-label="Sections">
+      {visible.map((tab) => (
+        <NavLink
+          key={tab.path}
+          to={tab.path}
+          className={({ isActive }) => `${classes.tab} ${isActive ? classes.active : ''}`}
+        >
+          {tab.label}
+        </NavLink>
+      ))}
+    </Box>
   );
 }

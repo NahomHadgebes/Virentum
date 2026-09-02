@@ -49,14 +49,39 @@ public sealed class InspectionServiceTests
             new FixedTimeProvider(ScanInstant),
             NullLogger<InspectionService>.Instance);
 
+    /// <summary>A form-file collection, since the API now pools several images.</summary>
+    private static IFormFileCollection Files(params IFormFile?[] files)
+    {
+        var collection = new FormFileCollection();
+        collection.AddRange(files.Where(file => file is not null)!);
+        return collection;
+    }
+
     private Task<InspectionResponse> ScanAsync(
         IFormFile? image,
         SupportedFruit fruit = SupportedFruit.Banana,
         double ripenessScore = 0.5,
-        IVisionService? vision = null)
+        IVisionService? vision = null,
+        Audience audience = Audience.Business)
     {
         var service = CreateService(vision ?? new StubVisionService(ripenessScore));
-        return service.ScanAsync(new ScanRequest { Image = image, FruitType = fruit }, "demo-store");
+        return service.ScanAsync(
+            new ScanRequest
+            {
+                Images = image is null ? null : Files(image),
+                FruitType = fruit,
+                Audience = audience,
+            },
+            "demo-store");
+    }
+
+    private Task<InspectionResponse> ScanManyAsync(
+        params IFormFile[] images)
+    {
+        var service = CreateService(new StubVisionService(0.5));
+        return service.ScanAsync(
+            new ScanRequest { Images = Files(images), FruitType = SupportedFruit.Banana },
+            "demo-store");
     }
 
     [Fact]
@@ -66,7 +91,7 @@ public sealed class InspectionServiceTests
             () => ScanAsync(image: null));
 
         Assert.Equal(400, exception.StatusCode);
-        Assert.Equal("An image file is required.", exception.Message);
+        Assert.Equal("At least one image is required.", exception.Message);
     }
 
     [Fact]
@@ -223,9 +248,92 @@ public sealed class InspectionServiceTests
 
         public Task<VisionPrediction> AnalyseAsync(
             SupportedFruit fruit,
-            byte[] imageBytes,
+            IReadOnlyList<byte[]> images,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new VisionPrediction(fruit, 0.6, _tags, AnalysedShare: 0.7));
+    }
+
+    /// <summary>
+    /// More angles is more evidence, so every supplied photograph has to reach
+    /// the provider — not just the first.
+    /// </summary>
+    [Fact]
+    public async Task Passes_every_supplied_image_to_the_vision_provider()
+    {
+        var vision = new StubVisionService(0.5);
+        var service = CreateService(vision);
+
+        await service.ScanAsync(
+            new ScanRequest
+            {
+                Images = Files(FileOf("image/png"), FileOf("image/jpeg"), FileOf("image/webp")),
+                FruitType = SupportedFruit.Banana,
+            },
+            "demo-store");
+
+        Assert.Equal(3, vision.ImagesReceived);
+    }
+
+    [Fact]
+    public async Task Reports_how_many_photographs_the_reading_pools()
+    {
+        var response = await ScanManyAsync(FileOf("image/png"), FileOf("image/png"));
+
+        Assert.Equal(2, response.ImageCount);
+    }
+
+    [Fact]
+    public async Task Refuses_more_images_than_it_will_analyse()
+    {
+        var exception = await Assert.ThrowsAsync<InvalidInspectionRequestException>(
+            () => ScanManyAsync(
+                FileOf("image/png"), FileOf("image/png"),
+                FileOf("image/png"), FileOf("image/png")));
+
+        Assert.Contains("At most 3 images", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An operator who attached three pictures must not receive a verdict
+    /// silently based on two.
+    /// </summary>
+    [Fact]
+    public async Task Rejects_the_whole_scan_when_one_image_is_invalid()
+    {
+        var exception = await Assert.ThrowsAsync<InvalidInspectionRequestException>(
+            () => ScanManyAsync(FileOf("image/png"), FileOf("application/pdf")));
+
+        Assert.Contains("application/pdf", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(_repository.Saved);
+    }
+
+    /// <summary>
+    /// The same measurement, two readers. A shop is told what to do with the
+    /// stock; a person is told whether to eat it.
+    /// </summary>
+    [Fact]
+    public async Task Words_the_recommendation_for_the_requested_audience()
+    {
+        var business = await ScanAsync(
+            FileOf("image/png"), SupportedFruit.Banana, 0.5, audience: Audience.Business);
+        var consumer = await ScanAsync(
+            FileOf("image/png"), SupportedFruit.Banana, 0.5, audience: Audience.Consumer);
+
+        Assert.NotEqual(business.Recommendation, consumer.Recommendation);
+        Assert.Equal(business.RipenessPercent, consumer.RipenessPercent);
+        Assert.Equal(business.CommercialStatus, consumer.CommercialStatus);
+        Assert.Equal(Audience.Business, business.Audience);
+        Assert.Equal(Audience.Consumer, consumer.Audience);
+    }
+
+    [Fact]
+    public async Task Carries_the_stage_a_reader_can_check_against_the_fruit()
+    {
+        var response = await ScanAsync(FileOf("image/png"), SupportedFruit.Banana, 0.5);
+
+        Assert.Equal("Prime", response.StageName);
+        Assert.False(string.IsNullOrWhiteSpace(response.Appearance));
+        Assert.Equal(EdibilityVerdict.Good, response.Edibility);
     }
 
     [Fact]
@@ -242,7 +350,7 @@ public sealed class InspectionServiceTests
     {
         public Task<VisionPrediction> AnalyseAsync(
             SupportedFruit fruit,
-            byte[] imageBytes,
+            IReadOnlyList<byte[]> images,
             CancellationToken cancellationToken = default) =>
             throw new VisionAnalysisException("The vision provider could not be reached.");
     }
