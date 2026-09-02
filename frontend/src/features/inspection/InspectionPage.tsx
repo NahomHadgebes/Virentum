@@ -74,6 +74,18 @@ export function InspectionPage() {
     setError(null);
   };
 
+  /**
+   * Changing the fruit invalidates the verdict on screen: it was reached with
+   * the previous selection's thresholds and advice. Leaving it up produced a
+   * card that said "Banana" while the selector said "Avocado". The image is
+   * kept — the operator is most likely re-running the same photo.
+   */
+  const changeFruit = (next: SupportedFruit) => {
+    setFruitType(next);
+    setResult(null);
+    setError(null);
+  };
+
   const rejectFile = (message: string) => {
     replaceSelection(null);
     setFileProblem(message);
@@ -110,7 +122,7 @@ export function InspectionPage() {
 
         <Card withBorder padding="lg" radius="md">
           <Stack gap="md">
-            <FruitSelect value={fruitType} onChange={setFruitType} disabled={scanning} />
+            <FruitSelect value={fruitType} onChange={changeFruit} disabled={scanning} />
 
             <ImageDropzone
               file={selection?.file ?? null}
