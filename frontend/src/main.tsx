@@ -8,6 +8,7 @@ import './theme.css';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { AudienceProvider } from './audience/AudienceContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { theme } from './theme';
 
 const container = document.getElementById('root');
@@ -19,13 +20,18 @@ if (container === null) {
 createRoot(container).render(
   <StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="auto">
-      <BrowserRouter>
-        <AuthProvider>
-          <AudienceProvider>
-            <App />
-          </AudienceProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      {/* Outermost catch: the landing and login pages sit outside the app
+          layout, and a provider itself can throw. Nothing below this may end
+          as a blank page. */}
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <AudienceProvider>
+              <App />
+            </AudienceProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
     </MantineProvider>
   </StrictMode>,
 );
