@@ -81,8 +81,11 @@ export function LandingPage() {
                 and when it isn&apos;t.
               </Text>
             </Title>
+            {/* Deliberately not a list of fruits: which ones can be scanned is
+                the API's answer, and a landing page that enumerates them goes
+                stale the moment one is added. */}
             <Text fz="lg" c="dimmed" maw={540}>
-              Photograph a banana or an avocado. Virentum reads the colour, places it on that
+              Photograph the fruit. Virentum reads the colour, places it on that
               fruit&apos;s ripeness scale, and tells you what it means — including when the picture
               wasn&apos;t good enough to say.
             </Text>
