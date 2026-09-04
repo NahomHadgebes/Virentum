@@ -1,14 +1,17 @@
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Processors;
 using Virentum.Api.Services.Catalog;
+using Virentum.Api.Tests.Support;
 using Xunit;
 
 namespace Virentum.Api.Tests.Services.Catalog;
 
 public sealed class FruitCatalogServiceTests
 {
+    // Deliberately reversed: the catalogue must order by the enum, not by the
+    // order the container happened to hand the processors over in.
     private static FruitCatalogService Catalog() =>
-        new(new IFruitProcessor[] { new AvocadoProcessor(), new BananaProcessor() });
+        new(RegisteredProcessors.All.AsEnumerable().Reverse());
 
     [Fact]
     public void Publishes_every_registered_fruit()

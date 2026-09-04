@@ -1,6 +1,7 @@
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Models;
 using Virentum.Api.Domain.Processors;
+using Virentum.Api.Tests.Support;
 using Xunit;
 
 namespace Virentum.Api.Tests.Domain.Processors;
@@ -149,9 +150,7 @@ public sealed class ColourMismatchTests
     [Fact]
     public void Every_fruit_declares_a_colour_profile()
     {
-        IFruitProcessor[] processors = { new BananaProcessor(), new AvocadoProcessor() };
-
-        foreach (var processor in processors)
+        foreach (var processor in RegisteredProcessors.All)
         {
             Assert.NotEmpty(processor.ColourProfile.PlausibleBuckets);
             Assert.All(

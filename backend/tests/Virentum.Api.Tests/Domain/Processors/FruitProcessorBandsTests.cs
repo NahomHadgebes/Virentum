@@ -1,6 +1,7 @@
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Models;
 using Virentum.Api.Domain.Processors;
+using Virentum.Api.Tests.Support;
 using Xunit;
 
 namespace Virentum.Api.Tests.Domain.Processors;
@@ -87,15 +88,13 @@ public sealed class FruitProcessorBandsTests
     }
 
     /// <summary>
-    /// The two shipped fruits must satisfy the same rule, so a future edit to
-    /// their thresholds cannot leave a score unclassified.
+    /// Every shipped fruit must satisfy the same rule, so a future edit to its
+    /// thresholds cannot leave a score unclassified.
     /// </summary>
     [Fact]
     public void Every_registered_processor_covers_the_whole_scale()
     {
-        IFruitProcessor[] processors = { new BananaProcessor(), new AvocadoProcessor() };
-
-        foreach (var processor in processors)
+        foreach (var processor in RegisteredProcessors.All)
         {
             Assert.Equal(0, processor.Bands[0].MinPercent);
             Assert.Equal(100, processor.Bands[^1].MaxPercent);
@@ -115,9 +114,7 @@ public sealed class FruitProcessorBandsTests
     [Fact]
     public void Every_band_guidance_formats_without_throwing()
     {
-        IFruitProcessor[] processors = { new BananaProcessor(), new AvocadoProcessor() };
-
-        foreach (var band in processors.SelectMany(processor => processor.Bands))
+        foreach (var band in RegisteredProcessors.All.SelectMany(processor => processor.Bands))
         {
             var described = band.DescribeFor(band.MinPercent, Audience.Business);
 

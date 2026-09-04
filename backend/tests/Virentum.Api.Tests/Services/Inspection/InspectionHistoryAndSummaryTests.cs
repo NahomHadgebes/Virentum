@@ -3,6 +3,7 @@ using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Processors;
 using Virentum.Api.Infrastructure.Persistence.Entities;
 using Virentum.Api.Services.Inspection;
+using Virentum.Api.Tests.Support;
 using Virentum.Api.Tests.TestDoubles;
 using Xunit;
 
@@ -17,7 +18,7 @@ public sealed class InspectionHistoryAndSummaryTests
     private InspectionService CreateService() =>
         new(
             new StubVisionService(0.5),
-            new FruitProcessorFactory(new IFruitProcessor[] { new BananaProcessor(), new AvocadoProcessor() }),
+            new FruitProcessorFactory(RegisteredProcessors.All),
             _repository,
             new FixedTimeProvider(Now),
             NullLogger<InspectionService>.Instance);

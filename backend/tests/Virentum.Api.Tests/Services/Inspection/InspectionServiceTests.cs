@@ -8,6 +8,7 @@ using Virentum.Api.Domain.Processors;
 using Virentum.Api.Exceptions;
 using Virentum.Api.Services.Inspection;
 using Virentum.Api.Services.Vision;
+using Virentum.Api.Tests.Support;
 using Virentum.Api.Tests.TestDoubles;
 using Xunit;
 
@@ -44,7 +45,7 @@ public sealed class InspectionServiceTests
     private InspectionService CreateService(IVisionService vision) =>
         new(
             vision,
-            new FruitProcessorFactory(new IFruitProcessor[] { new BananaProcessor(), new AvocadoProcessor() }),
+            new FruitProcessorFactory(RegisteredProcessors.All),
             _repository,
             new FixedTimeProvider(ScanInstant),
             NullLogger<InspectionService>.Instance);

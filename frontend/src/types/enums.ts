@@ -7,7 +7,7 @@
  */
 
 /** Domain/Enums/SupportedFruit.cs */
-export const SUPPORTED_FRUITS = ['Banana', 'Avocado'] as const;
+export const SUPPORTED_FRUITS = ['Banana', 'Avocado', 'Pear', 'Mango'] as const;
 
 export type SupportedFruit = (typeof SUPPORTED_FRUITS)[number];
 

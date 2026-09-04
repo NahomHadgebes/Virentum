@@ -2,17 +2,20 @@ using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Models;
 using Virentum.Api.Domain.Processors;
 using Virentum.Api.Exceptions;
+using Virentum.Api.Tests.Support;
 using Xunit;
 
 namespace Virentum.Api.Tests.Domain.Processors;
 
 public sealed class FruitProcessorFactoryTests
 {
-    private static readonly IFruitProcessor[] All = { new BananaProcessor(), new AvocadoProcessor() };
+    private static IFruitProcessor[] All => RegisteredProcessors.All;
 
     [Theory]
     [InlineData(SupportedFruit.Banana)]
     [InlineData(SupportedFruit.Avocado)]
+    [InlineData(SupportedFruit.Pear)]
+    [InlineData(SupportedFruit.Mango)]
     public void Resolves_the_processor_that_declares_the_requested_fruit(SupportedFruit fruit)
     {
         var processor = new FruitProcessorFactory(All).Create(fruit);
