@@ -169,11 +169,47 @@ frontend/
 
 `backend/README.md` goes further into the API's architecture.
 
+## Deploying
+
+The two halves go to different places. Netlify builds and serves the frontend;
+it cannot run a .NET process, so the API is deployed separately — the
+`Dockerfile` publishes it as a non-root container on port 8080, and the
+connection string is read from `ConnectionStrings__Postgres` or Railway's
+`DATABASE_URL`.
+
+**The API first**, because the frontend needs its URL:
+
+| Variable | Why |
+|---|---|
+| `ConnectionStrings__Postgres` or `DATABASE_URL` | The database |
+| `Jwt__Secret` | At least 32 characters, and not the development one |
+| `Cors__AllowedOrigins__0` | The Netlify origin, or the browser blocks every call |
+
+**Then the frontend.** `netlify.toml` sets the build directory, the publish
+directory and the SPA redirect — without that redirect, opening `/guide`
+directly returns a 404, because Netlify looks for a file at that path and React
+Router never gets a chance to answer. One variable has to be set in the Netlify
+UI:
+
+```
+VITE_API_BASE_URL = https://your-api-host
+```
+
+Vite inlines it at build time, so it must be set before the build rather than
+at runtime. A build without it fails with that message instead of publishing a
+site whose every request goes nowhere.
+
 ## Known gaps
 
 - **No migration is committed.** `MigrateAsync` runs at startup but has nothing
   to apply, so a fresh database gets no tables until the step above is run once
-  and the result committed.
+  and the result committed. A deployed API needs this before it can serve
+  anything.
+- **A deployed API has no accounts.** The demo operator is seeded in
+  Development only, and there is no registration endpoint, so a Production
+  instance starts with an empty `Users` table and nobody can sign in. A public
+  demo needs a deliberate decision here — a seeded read-only account, or a
+  registration flow — rather than a development guard quietly removed.
 - **Colour cannot grade a cut avocado.** Brown flesh and a brown stone read the
   same, and the avocado's ready band is wide, so a visibly spoiled one can still
   score inside it. `AzureCustomVisionService` is written and wired behind

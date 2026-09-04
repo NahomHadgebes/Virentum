@@ -1,0 +1,36 @@
+# Netlify builds the frontend only. The API is a .NET service with a Postgres
+# database and is deployed separately; VITE_API_BASE_URL points this build at
+# it, and that origin must appear in the API's Cors:AllowedOrigins.
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  # Relative to `base`, so this resolves to frontend/dist.
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# React Router puts real paths in the address bar. Opening /guide directly, or
+# reloading it, asks Netlify for a file that does not exist — without this it
+# answers 404 and the app never loads. Every path is served the same shell and
+# the router decides from there.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The app talks to one API over HTTPS, loads its fonts from its own origin, and
+# has no iframe, plugin or inline-script needs.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Vite fingerprints everything under /assets, so those files are immutable.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
