@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Button, Stack, Text, Title } from '@mantine/core';
 import { useDocumentTitle, useScrollIntoView } from '@mantine/hooks';
 import { scan } from '../../api/inspection';
+import { getFruits } from '../../api/fruits';
+import { useApiResource } from '../../api/useApiResource';
 import { asApiError } from '../../api/problemDetails';
 import type { ApiError } from '../../api/problemDetails';
 import type { InspectionResponse } from '../../types/contracts';
@@ -14,13 +16,6 @@ import type { Shot } from './ImageUploader';
 import { InspectionResult } from './InspectionResult';
 import { AnalysingCard } from './AnalysingCard';
 
-/**
- * ScanRequest.FruitType is a non-nullable enum with no [Required], so omitting
- * it would silently bind to Banana on the server. Preselecting it means what the
- * operator sees is what gets sent.
- */
-const DEFAULT_FRUIT: SupportedFruit = 'Banana';
-
 let shotSequence = 0;
 
 export function InspectionPage() {
@@ -29,7 +24,29 @@ export function InspectionPage() {
   const { audience } = useAudience();
   const isConsumer = audience !== 'Business';
 
-  const [fruitType, setFruitType] = useState<SupportedFruit>(DEFAULT_FRUIT);
+  // Which fruits can be scanned is the API's answer, not this build's guess.
+  const loadFruits = useCallback(() => getFruits(), []);
+  const {
+    data: profiles,
+    error: catalogError,
+    loading: catalogLoading,
+  } = useApiResource(loadFruits);
+
+  const fruits = useMemo(
+    () => (profiles ?? []).map((profile) => profile.fruitType),
+    [profiles],
+  );
+
+  /**
+   * The operator's choice, once they have made one. The selection is derived
+   * rather than stored so that it cannot outlive the list it came from, and so
+   * that nothing has to write state from an effect: ScanRequest.FruitType is a
+   * non-nullable enum with no [Required], so a scan sent with nothing selected
+   * would silently bind to the server's first member.
+   */
+  const [chosenFruit, setChosenFruit] = useState<SupportedFruit | null>(null);
+  const fruitType =
+    chosenFruit !== null && fruits.includes(chosenFruit) ? chosenFruit : (fruits[0] ?? null);
   const [shots, setShots] = useState<Shot[]>([]);
   const [fileProblem, setFileProblem] = useState<string | null>(null);
   const [result, setResult] = useState<InspectionResponse | null>(null);
@@ -89,13 +106,19 @@ export function InspectionPage() {
    * the operator is most likely about to re-run them.
    */
   const changeFruit = (next: SupportedFruit) => {
-    setFruitType(next);
+    setChosenFruit(next);
     invalidate();
   };
 
   const runScan = async () => {
     if (shots.length === 0) {
       setFileProblem('At least one image is required.');
+      return;
+    }
+
+    if (fruitType === null) {
+      // The button is disabled in this state; this is the guard that keeps the
+      // request honest rather than sending an unselected fruit.
       return;
     }
 
@@ -136,7 +159,17 @@ export function InspectionPage() {
             stretched to 860px read as a stretched layout, not a wide one. */}
         <Box className="rise" maw={620}>
           <Stack gap="lg">
-            <FruitSelect value={fruitType} onChange={changeFruit} disabled={scanning} />
+            <FruitSelect
+              fruits={fruits}
+              value={fruitType}
+              onChange={changeFruit}
+              disabled={scanning}
+              loading={catalogLoading}
+            />
+
+            {/* A catalogue that will not load is shown, not swallowed: without
+                it there is nothing to scan, and the reason belongs on screen. */}
+            {catalogError !== null && <ProblemAlert error={catalogError} />}
 
             <ImageUploader
               shots={shots}
@@ -158,7 +191,7 @@ export function InspectionPage() {
               size="md"
               onClick={() => void runScan()}
               loading={scanning}
-              disabled={shots.length === 0}
+              disabled={shots.length === 0 || fruitType === null}
               fullWidth
             >
               {scanning
