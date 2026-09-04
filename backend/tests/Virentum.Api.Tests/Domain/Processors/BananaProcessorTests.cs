@@ -12,10 +12,10 @@ namespace Virentum.Api.Tests.Domain.Processors;
 /// </summary>
 public sealed class BananaProcessorTests
 {
-    private static RipenessAssessment Assess(double score) =>
+    private static RipenessAssessment Assess(double score, Audience audience = Audience.Consumer) =>
         new BananaProcessor().Assess(
             new VisionPrediction(SupportedFruit.Banana, score, new Dictionary<string, double>()),
-            Audience.Consumer);
+            audience);
 
     [Fact]
     public void Declares_the_fruit_it_handles()
@@ -67,14 +67,23 @@ public sealed class BananaProcessorTests
         Assert.Equal(expectedPercent, assessment.RipenessPercent);
     }
 
+    /// <summary>
+    /// The measured value is quoted to a shop, which has to price against it,
+    /// and deliberately not to a shopper, who has no use for a percentage. The
+    /// placeholder therefore lives in the business copy alone, so both
+    /// directions are asserted — restoring only the first half would let the
+    /// number leak back into the consumer wording unnoticed.
+    /// </summary>
     [Fact]
-    public void Interpolates_the_measured_percent_into_the_discount_advice()
+    public void Quotes_the_measured_percent_to_a_shop_but_not_to_a_shopper()
     {
-        var assessment = Assess(0.81);
+        var business = Assess(0.81, Audience.Business);
 
-        Assert.Equal(81, assessment.RipenessPercent);
-        Assert.Contains("81%", assessment.Recommendation, StringComparison.Ordinal);
-        Assert.Contains("discount label", assessment.Recommendation, StringComparison.Ordinal);
+        Assert.Equal(81, business.RipenessPercent);
+        Assert.Contains("81%", business.Recommendation, StringComparison.Ordinal);
+        Assert.Contains("discount label", business.Recommendation, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("81%", Assess(0.81).Recommendation, StringComparison.Ordinal);
     }
 
     [Fact]
