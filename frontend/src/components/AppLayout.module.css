@@ -4,9 +4,14 @@
   border-bottom: 1px solid var(--app-hairline);
 }
 
+/*
+ * The one content column, shared by the navigation rail and every page, so the
+ * tabs line up with the heading beneath them and nothing shifts sideways when
+ * you move between pages or switch audience.
+ */
 .shell {
   width: 100%;
-  max-width: 980px;
+  max-width: 892px;
   margin-inline: auto;
   padding-inline: var(--mantine-spacing-md);
 }

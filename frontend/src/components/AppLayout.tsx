@@ -1,4 +1,4 @@
-import { AppShell, Box, Group, Menu, Stack, Text, UnstyledButton } from '@mantine/core';
+import { AppShell, Box, Group, Menu, Text, UnstyledButton } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -10,10 +10,14 @@ import classes from './AppLayout.module.css';
 /**
  * Chrome for signed-in routes.
  *
- * Deliberately block flow rather than a flex Stack around the page: a flex item
- * defaults to min-width:auto, so a page containing anything wide — the history
- * table, at 620px — would refuse to shrink and push the layout past the
- * viewport.
+ * The page sits in block flow, never in a flex Stack. Two separate faults come
+ * from wrapping it in one. A flex item defaults to min-width:auto, so a page
+ * containing anything wide — the history table, at 620px — refuses to shrink
+ * and pushes the layout past the viewport. And a Container carries
+ * margin-inline:auto, which cancels the cross-axis stretch a column flex
+ * container would otherwise apply: the column then sizes to its own text, so
+ * the same page rendered at a different width for each audience, because their
+ * wording is a different length.
  */
 export function AppLayout({ children }: { children: ReactNode }) {
   const { session, signOut } = useAuth();
@@ -92,7 +96,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </Box>
 
         <Box className={classes.shell} py="xl">
-          <Stack gap="xl">{children}</Stack>
+          {children}
         </Box>
       </AppShell.Main>
     </AppShell>

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Box, Container, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core';
+import { Box, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { useDocumentTitle } from '@mantine/hooks';
 import { getFruits } from '../../api/fruits';
 import { useApiResource } from '../../api/useApiResource';
@@ -25,7 +25,6 @@ export function FruitGuidePage() {
   const { data, error, loading } = useApiResource(load);
 
   return (
-    <Container size={860} px={0}>
       <Stack gap="xl">
         <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
           <Stack gap={6} maw={520}>
@@ -66,6 +65,5 @@ export function FruitGuidePage() {
           </Stack>
         )}
       </Stack>
-    </Container>
   );
 }

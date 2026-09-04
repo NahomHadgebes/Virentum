@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Container, Stack, Text, Title } from '@mantine/core';
+import { Alert, Box, Button, Stack, Text, Title } from '@mantine/core';
 import { useDocumentTitle, useScrollIntoView } from '@mantine/hooks';
 import { scan } from '../../api/inspection';
 import { asApiError } from '../../api/problemDetails';
@@ -121,7 +121,6 @@ export function InspectionPage() {
   };
 
   return (
-    <Container size={680} px={0}>
       <Stack gap="xl">
         <Stack gap={6}>
           <Title order={2}>{isConsumer ? 'Check your fruit' : 'Inspect produce'}</Title>
@@ -132,7 +131,10 @@ export function InspectionPage() {
           </Text>
         </Stack>
 
-        <Box className="rise">
+        {/* The form keeps a comfortable measure while the heading and the
+            verdict below it use the full column: a select and a submit button
+            stretched to 860px read as a stretched layout, not a wide one. */}
+        <Box className="rise" maw={620}>
           <Stack gap="lg">
             <FruitSelect value={fruitType} onChange={changeFruit} disabled={scanning} />
 
@@ -177,6 +179,5 @@ export function InspectionPage() {
           )}
         </div>
       </Stack>
-    </Container>
   );
 }

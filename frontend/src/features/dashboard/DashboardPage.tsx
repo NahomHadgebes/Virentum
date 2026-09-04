@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Card, Container, Group, Select, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { Card, Group, Select, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { useDocumentTitle } from '@mantine/hooks';
 import { getSummary } from '../../api/inspection';
 import { useApiResource } from '../../api/useApiResource';
@@ -20,7 +20,6 @@ export function DashboardPage() {
   const { data, error, loading } = useApiResource(load);
 
   return (
-    <Container size="md">
       <Stack gap="lg">
         <Group justify="space-between" align="flex-end" wrap="wrap">
           <div>
@@ -79,6 +78,5 @@ export function DashboardPage() {
           </Stack>
         )}
       </Stack>
-    </Container>
   );
 }
