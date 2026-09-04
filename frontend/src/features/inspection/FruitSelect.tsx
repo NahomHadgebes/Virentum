@@ -3,21 +3,30 @@ import { SUPPORTED_FRUITS } from '../../types/enums';
 import type { SupportedFruit } from '../../types/enums';
 
 interface FruitSelectProps {
-  value: SupportedFruit;
+  /** What the API reported it can inspect, in the order it reported them. */
+  fruits: readonly SupportedFruit[];
+  value: SupportedFruit | null;
   onChange: (fruit: SupportedFruit) => void;
   disabled: boolean;
+  loading: boolean;
 }
 
 /**
- * The options come from SUPPORTED_FRUITS, so adding a fruit to the backend enum
- * and to types/enums.ts is enough — there is no second list to forget.
+ * The options come from GET /api/fruits, not from the frontend's own enum.
+ *
+ * The enum says which names are legal in the contract; only the API knows which
+ * of them the build that is actually answering can inspect. Offering the union
+ * meant a frontend ahead of its API let an operator pick a fruit, choose photos
+ * and press analyse, only to be told the value was not valid for FruitType —
+ * after the upload. A fruit that cannot be scanned is now never offered.
  */
-export function FruitSelect({ value, onChange, disabled }: FruitSelectProps) {
+export function FruitSelect({ fruits, value, onChange, disabled, loading }: FruitSelectProps) {
   return (
     <Select
       label="Fruit"
-      data={[...SUPPORTED_FRUITS]}
+      data={[...fruits]}
       value={value}
+      placeholder={loading ? 'Loading the fruits this API supports…' : 'Select a fruit'}
       onChange={(selected) => {
         // Narrow against the contract rather than asserting: a value that is
         // not a SupportedFruit must never reach the request.
@@ -27,7 +36,7 @@ export function FruitSelect({ value, onChange, disabled }: FruitSelectProps) {
         }
       }}
       allowDeselect={false}
-      disabled={disabled}
+      disabled={disabled || loading || fruits.length === 0}
     />
   );
 }

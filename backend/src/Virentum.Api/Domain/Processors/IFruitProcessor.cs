@@ -25,8 +25,17 @@ public interface IFruitProcessor
     /// </summary>
     IReadOnlyList<Models.RipenessBand> Bands { get; }
 
+    /// <summary>The colours this fruit can legitimately present.</summary>
+    Models.ColourProfile ColourProfile { get; }
+
     /// <summary>
-    /// Evaluates a vision prediction and returns the merchandising assessment.
+    /// What limits the reading behind an assessment of this fruit, if anything.
     /// </summary>
-    RipenessAssessment Assess(VisionPrediction prediction);
+    Models.InspectionEvidence AssessEvidence(Models.VisionPrediction prediction);
+
+    /// <summary>
+    /// Evaluates a vision prediction and returns the assessment, worded for the
+    /// audience that asked.
+    /// </summary>
+    RipenessAssessment Assess(VisionPrediction prediction, Audience audience);
 }

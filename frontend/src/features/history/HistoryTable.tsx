@@ -1,6 +1,6 @@
 import { Badge, Progress, Table, Text } from '@mantine/core';
 import type { InspectionHistoryItem } from '../../types/contracts';
-import { presentStatus } from '../inspection/statusPresentation';
+import { presentStatus } from '../../status/statusPresentation';
 
 const TIMESTAMP_FORMAT = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',

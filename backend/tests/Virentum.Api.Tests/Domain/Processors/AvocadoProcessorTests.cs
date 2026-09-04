@@ -12,9 +12,10 @@ namespace Virentum.Api.Tests.Domain.Processors;
 /// </summary>
 public sealed class AvocadoProcessorTests
 {
-    private static RipenessAssessment Assess(double score) =>
+    private static RipenessAssessment Assess(double score, Audience audience = Audience.Consumer) =>
         new AvocadoProcessor().Assess(
-            new VisionPrediction(SupportedFruit.Avocado, score, new Dictionary<string, double>()));
+            new VisionPrediction(SupportedFruit.Avocado, score, new Dictionary<string, double>()),
+            audience);
 
     [Fact]
     public void Declares_the_fruit_it_handles()
@@ -65,16 +66,21 @@ public sealed class AvocadoProcessorTests
         var prediction = new VisionPrediction(
             SupportedFruit.Avocado, 0.80, new Dictionary<string, double>());
 
-        Assert.Equal(CommercialStatus.ReadyForSale, new AvocadoProcessor().Assess(prediction).CommercialStatus);
-        Assert.Equal(CommercialStatus.ActionRequired, new BananaProcessor().Assess(prediction).CommercialStatus);
+        Assert.Equal(CommercialStatus.ReadyForSale, new AvocadoProcessor().Assess(prediction, Audience.Consumer).CommercialStatus);
+        Assert.Equal(CommercialStatus.ActionRequired, new BananaProcessor().Assess(prediction, Audience.Consumer).CommercialStatus);
     }
 
+    /// <summary>See the note on the banana equivalent: the number is a shop's
+    /// concern, so it appears in one audience's copy and not the other's.</summary>
     [Fact]
-    public void Interpolates_the_measured_percent_into_the_discount_advice()
+    public void Quotes_the_measured_percent_to_a_shop_but_not_to_a_shopper()
     {
-        var assessment = Assess(0.90);
+        var business = Assess(0.90, Audience.Business);
 
-        Assert.Equal(90, assessment.RipenessPercent);
-        Assert.Contains("90%", assessment.Recommendation, StringComparison.Ordinal);
+        Assert.Equal(90, business.RipenessPercent);
+        Assert.Contains("90%", business.Recommendation, StringComparison.Ordinal);
+        Assert.Contains("discount label", business.Recommendation, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("90%", Assess(0.90).Recommendation, StringComparison.Ordinal);
     }
 }

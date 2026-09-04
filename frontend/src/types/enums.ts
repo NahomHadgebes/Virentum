@@ -7,7 +7,7 @@
  */
 
 /** Domain/Enums/SupportedFruit.cs */
-export const SUPPORTED_FRUITS = ['Banana', 'Avocado'] as const;
+export const SUPPORTED_FRUITS = ['Banana', 'Avocado', 'Pear', 'Mango'] as const;
 
 export type SupportedFruit = (typeof SUPPORTED_FRUITS)[number];
 
@@ -20,3 +20,18 @@ export const COMMERCIAL_STATUSES = [
 ] as const;
 
 export type CommercialStatus = (typeof COMMERCIAL_STATUSES)[number];
+
+/** Domain/Enums/Audience.cs */
+export const AUDIENCES = ['Consumer', 'Business'] as const;
+
+export type Audience = (typeof AUDIENCES)[number];
+
+/** Domain/Enums/EdibilityVerdict.cs */
+export const EDIBILITY_VERDICTS = [
+  'NotReadyYet',
+  'Good',
+  'EatSoon',
+  'DoNotEat',
+] as const;
+
+export type EdibilityVerdict = (typeof EDIBILITY_VERDICTS)[number];

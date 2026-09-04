@@ -7,9 +7,13 @@ returns a clean DTO to the frontend.
 
 > **API contract consumed by the frontend**
 > - `POST /api/auth/login` → `{ token, user: { storeId, displayName, station } }`
-> - `POST /api/inspection/scan` (multipart `Image`, `FruitType`; `Authorization: Bearer <jwt>`)
->   → `{ fruitType, ripenessPercent, commercialStatus, recommendation, scannedAt }`
-> - `commercialStatus ∈ { ReadyForSale, ActionRequired, Expired }`
+> - `GET /api/fruits` → every fruit this build can inspect, with its full band table
+> - `POST /api/inspection/scan` (multipart `Images` ×1–3, `FruitType`, `Audience`;
+>   `Authorization: Bearer <jwt>`) → the verdict, its factors and its evidence
+> - `GET /api/inspection/history`, `GET /api/inspection/summary`
+> - `commercialStatus ∈ { Underripe, ReadyForSale, ActionRequired, Expired }`
+> - `edibility ∈ { NotReadyYet, Good, EatSoon, DoNotEat }` — a separate scale on
+>   purpose: a banana a shop must pull is often still fine for baking.
 
 ## How the architecture honours the guardrails
 
@@ -18,14 +22,17 @@ No switch-statements or `if/else` chains on fruit type anywhere in the
 controllers or services.
 
 - `Domain/Processors/IFruitProcessor.cs` — strategy contract (one class per fruit).
-- `Domain/Processors/BananaProcessor.cs`, `AvocadoProcessor.cs` — isolated logic.
+- `Domain/Processors/BananaProcessor.cs`, `AvocadoProcessor.cs`,
+  `PearProcessor.cs`, `MangoProcessor.cs` — isolated logic, one class per fruit.
 - `Domain/Processors/FruitProcessorFactory.cs` — dictionary-backed resolver.
 - `DependencyInjection/FruitProcessorRegistration.cs` — **auto-discovers** every
   `IFruitProcessor` by assembly scan.
 
 **Adding a new fruit (e.g. Apple):** add `Apple` to `SupportedFruit`, create
-`AppleProcessor : IFruitProcessor`. Nothing else changes — not the factory, not
-the controller, not the DI wiring.
+`AppleProcessor : FruitProcessor` with its bands, its colour profile and what
+each colour means for it. Nothing else changes — not the factory, not the
+controller, not the DI wiring, and not the frontend's fruit list, which is built
+from `GET /api/fruits`. Pear and mango were added exactly this way.
 
 ### 2. Domain isolation & DTOs
 - `Contracts/Requests` & `Contracts/Responses` — immutable `record` DTOs.
@@ -60,7 +67,7 @@ src/Virentum.Api
 ├── Controllers/                    # Thin HTTP edge (Auth, Inspection)
 ├── Contracts/                      # Request/Response DTOs (records)
 ├── Domain/
-│   ├── Enums/                      # SupportedFruit, CommercialStatus
+│   ├── Enums/                      # SupportedFruit, CommercialStatus, Audience, EdibilityVerdict
 │   ├── Models/                     # VisionPrediction, RipenessAssessment
 │   └── Processors/                 # IFruitProcessor + factory + per-fruit classes
 ├── Services/
@@ -76,36 +83,41 @@ src/Virentum.Api
 
 ## Running locally
 
-Prerequisites: just the **.NET 8 SDK**. Local development uses an **in-memory
-EF Core database**, so no database server or connection string is required to
-run the API.
+Prerequisites: the **.NET 8 SDK** and a local **PostgreSQL**. Development
+deliberately runs against a real database rather than the in-memory provider, so
+the enum-to-string conversions and the history queries behave exactly as they do
+in production.
 
 ```bash
-# From the repository root.
+# From backend/.
 
-# Provide the dev secret out-of-band (or rely on appsettings.Development.json):
-dotnet user-secrets init --project src/Virentum.Api
+createdb virentum_dev     # credentials in appsettings.Development.json
+
+# The schema is applied by migrations at startup; generate one the first time:
+dotnet ef migrations add InitialCreate --project src/Virentum.Api
+
+# Optional: keep the dev secret out of the file rather than using the checked-in one.
 dotnet user-secrets set "Jwt:Secret" "a-long-random-dev-secret-min-32-characters" --project src/Virentum.Api
 
 dotnet restore
 dotnet run --project src/Virentum.Api
-# Swagger UI: https://localhost:5001/swagger
+# http://localhost:5000 · Swagger UI at /swagger
 ```
 
-In Development the API uses an in-memory store (`UseInMemoryDatabase`), runs with
-`CustomVision:UseStub=true` (deterministic prediction from the image hash — no
-Azure account needed), and seeds a demo operator: **storeId** `demo-store`,
-**password** `changeit`. Data resets each time the process restarts.
+In Development the API runs with `CustomVision:UseStub=true` (the colour
+heuristic, no Azure account needed) and seeds one operator on first run:
+**storeId** `demo-store`, **password** `changeit`. Nothing is seeded outside
+Development.
 
 ## Database
 
 | Environment | Provider | Configuration |
 |---|---|---|
-| Development | EF Core **In-Memory** | none — works out of the box |
+| Development | **PostgreSQL** (Npgsql) | `appsettings.Development.json`, or user-secrets |
 | Production (Railway) | **PostgreSQL** (Npgsql) | `ConnectionStrings:Postgres` **or** `DATABASE_URL` |
 
-The provider is selected by environment in `AddVirentumPersistence`. For
-PostgreSQL the connection string is resolved in this order:
+Both environments use Npgsql, and `DatabaseInitializer` applies any pending
+migrations at startup. The connection string is resolved in this order:
 
 1. `ConnectionStrings:Postgres` (e.g. `ConnectionStrings__Postgres` env var), then
 2. `DATABASE_URL` (Railway's `postgres://user:pass@host:port/db`), which is
@@ -115,9 +127,9 @@ So on Railway you can simply attach the PostgreSQL plugin — it injects
 `DATABASE_URL` and the API picks it up with no extra config.
 
 ### Pointing the frontend at the backend
-The frontend posts to `/api/inspection/scan`. Either run it behind a dev proxy
-that forwards `/api` to `https://localhost:5001`, or set the appropriate base URL
-and add the origin to `Cors:AllowedOrigins`.
+Set `VITE_API_BASE_URL` in `frontend/.env` (the dev API listens on
+`http://localhost:5000`) and make sure that origin is in `Cors:AllowedOrigins`.
+`http://localhost:5173` is already allowed in Development.
 
 ### Docker
 
@@ -133,7 +145,7 @@ docker run --rm -p 8080:8080 \
 The image runs as a non-root user and listens on port 8080.
 
 ## Production notes
-- Replace `EnsureCreated` with EF Core **migrations**:
-  `dotnet ef migrations add InitialCreate` then `dotnet ef database update`.
+- Migrations are applied automatically at startup by `DatabaseInitializer`;
+  commit every migration you generate.
 - Set `CustomVision:UseStub=false` and supply real Custom Vision credentials.
 - Provide all secrets via environment variables / a managed secret store.

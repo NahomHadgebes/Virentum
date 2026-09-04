@@ -26,8 +26,13 @@ public sealed class FruitCatalogService : IFruitCatalogService
                     .Select(band => new RipenessBandResponse(
                         band.MinPercent,
                         band.MaxPercent,
+                        band.StageName,
+                        band.Appearance,
+                        band.SwatchHex,
                         band.CommercialStatus,
-                        band.Guidance))
+                        band.Edibility,
+                        band.BusinessGuidance,
+                        band.ConsumerGuidance))
                     .ToList()))
             .ToList();
     }

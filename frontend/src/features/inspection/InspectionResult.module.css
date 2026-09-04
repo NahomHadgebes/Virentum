@@ -1,0 +1,44 @@
+.card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--app-hairline);
+  border-radius: var(--mantine-radius-xl);
+  background: var(--app-card);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+/* The verdict colour states itself once, at the top, instead of tinting the
+   whole card — which would fight the text. */
+.accentBar {
+  height: 5px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 45%, transparent));
+}
+
+.headline {
+  letter-spacing: -0.015em;
+}
+
+.glyph {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: var(--mantine-radius-lg);
+  background: var(--mantine-color-sand-1);
+}
+
+:root[data-mantine-color-scheme='dark'] .glyph {
+  background: var(--mantine-color-dark-6);
+}
+
+.advice {
+  padding: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-left: 3px solid var(--accent);
+}
+
+.adviceText {
+  line-height: 1.55;
+}

@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Virentum</title>
+    <meta name="description" content="Virentum reads the colour of fresh produce and tells you what to do with it - at home or on the shelf." />
+    <!-- Self-hosted rather than fetched from a font CDN: the typography is
+         load-bearing here, and a blocked or slow third party would leave the
+         whole interface in a fallback serif. Two variable files, 115 kB. -->
+    <link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <title>Virentum · Know when produce is ready</title>
   </head>
   <body>
     <div id="root"></div>

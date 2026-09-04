@@ -1,0 +1,38 @@
+.track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--mantine-color-sand-2);
+  overflow: visible;
+}
+
+:root[data-mantine-color-scheme='dark'] .track {
+  background: var(--mantine-color-dark-5);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px 4px 4px 999px;
+  transition: width 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* A ring rather than a dot, so the marker reads on top of its own fill. */
+.marker {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid;
+  background: var(--app-card);
+  transform: translate(-50%, -50%);
+  box-shadow: var(--mantine-shadow-xs);
+  transition: left 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill,
+  .marker {
+    transition: none;
+  }
+}

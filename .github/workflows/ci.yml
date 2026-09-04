@@ -1,0 +1,92 @@
+name: CI
+
+# Every push is built, not only pull requests: the work here happens on
+# long-lived feature branches, and a branch that has been red for three days is
+# worth knowing about before a pull request is opened.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+# A second push supersedes the first; there is nothing to learn from finishing a
+# run against a commit that is already history.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend · build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # The solution at the repository root covers both the API and its tests,
+      # so restore, build and test all see the same project graph.
+      - name: Restore
+        run: dotnet restore Virentum.sln
+
+      # The API sets TreatWarningsAsErrors, so this step is also the lint step.
+      - name: Build
+        run: dotnet build Virentum.sln --configuration Release --no-restore
+
+      # The suite uses hand-written test doubles for the repository, the clock
+      # and the vision provider, so no database or Azure account is involved.
+      - name: Test
+        run: dotnet test Virentum.sln --configuration Release --no-build --verbosity normal
+
+  frontend:
+    name: Frontend · lint, typecheck, test and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      # Vite inlines VITE_API_BASE_URL at build time and .env is not committed,
+      # so it is supplied here. The value is irrelevant to the artefact's
+      # correctness; its absence is not, which is why the app throws on a
+      # missing base URL rather than guessing one.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: http://localhost:5000
+
+  image:
+    name: Backend · container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Dockerfile is part of the deliverable and is otherwise never
+      # exercised. Building it here catches a publish that only fails in the
+      # release configuration, or a file the image forgets to copy.
+      - name: Build image
+        run: docker build --tag virentum-api:ci backend

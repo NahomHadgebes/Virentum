@@ -12,4 +12,6 @@ public enum SupportedFruit
 {
     Banana,
     Avocado,
+    Pear,
+    Mango,
 }

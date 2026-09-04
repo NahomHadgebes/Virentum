@@ -1,61 +1,114 @@
-import { AppShell, Box, Button, Group, Stack, Text, Title } from '@mantine/core';
+import { AppShell, Box, Group, Menu, Text, UnstyledButton } from '@mantine/core';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { useAudience } from '../audience/useAudience';
 import { AppNav } from './AppNav';
 import { ColorSchemeToggle } from './ColorSchemeToggle';
+import classes from './AppLayout.module.css';
 
-/** Chrome for authenticated routes: who is signed in, and a way out. */
+/**
+ * Chrome for signed-in routes.
+ *
+ * The page sits in block flow, never in a flex Stack. Two separate faults come
+ * from wrapping it in one. A flex item defaults to min-width:auto, so a page
+ * containing anything wide — the history table, at 620px — refuses to shrink
+ * and pushes the layout past the viewport. And a Container carries
+ * margin-inline:auto, which cancels the cross-axis stretch a column flex
+ * container would otherwise apply: the column then sizes to its own text, so
+ * the same page rendered at a different width for each audience, because their
+ * wording is a different length.
+ */
 export function AppLayout({ children }: { children: ReactNode }) {
   const { session, signOut } = useAuth();
+  const { audience, choose } = useAudience();
 
   return (
-    <AppShell header={{ height: 64 }} padding="md">
-      <AppShell.Header>
+    <AppShell header={{ height: 62 }} padding={0}>
+      <AppShell.Header className={classes.header}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="sm">
-          <Title order={3} style={{ flexShrink: 0 }}>
-            Virentum
-          </Title>
+          <Link to="/scan" className={classes.brand}>
+            <Group gap={8} wrap="nowrap">
+              <Box className={classes.mark} aria-hidden />
+              <Text fw={700} fz="lg" ff="Fraunces, Georgia, serif" visibleFrom="xs">
+                Virentum
+              </Text>
+            </Group>
+          </Link>
 
-          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-            {session !== null && (
-              // minWidth:0 lets the flex child shrink so truncate can engage;
-              // without it the button gets squeezed instead of the text.
-              <Stack gap={0} align="flex-end" style={{ minWidth: 0 }} visibleFrom="xs">
-                <Text size="sm" fw={600} lh={1.2} truncate="end" maw={180}>
-                  {session.user.displayName}
-                </Text>
-                <Text size="xs" c="dimmed" lh={1.2} truncate="end" maw={180}>
-                  {session.user.station} · {session.user.storeId}
-                </Text>
-              </Stack>
-            )}
+          <Group gap="xs" wrap="nowrap">
+            <Menu position="bottom-end" width={220} radius="md">
+              <Menu.Target>
+                <UnstyledButton className={classes.audience}>
+                  <Text fz="xs" fw={600}>
+                    {audience === 'Business' ? 'For business' : 'At home'}
+                  </Text>
+                  <Text fz="xs" c="dimmed" aria-hidden>
+                    ▾
+                  </Text>
+                </UnstyledButton>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Answers are written for</Menu.Label>
+                <Menu.Item
+                  onClick={() => {
+                    choose('Consumer');
+                  }}
+                >
+                  At home — can I eat this?
+                </Menu.Item>
+                <Menu.Item
+                  onClick={() => {
+                    choose('Business');
+                  }}
+                >
+                  For business — what do we do with it?
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
 
             <ColorSchemeToggle />
 
             {session !== null && (
-              <Button variant="default" size="xs" onClick={signOut} style={{ flexShrink: 0 }}>
-                Sign out
-              </Button>
+              <Menu position="bottom-end" width={230} radius="md">
+                <Menu.Target>
+                  <UnstyledButton className={classes.avatar} aria-label="Account">
+                    {initials(session.user.displayName)}
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>
+                    {session.user.displayName} · {session.user.station}
+                  </Menu.Label>
+                  <Menu.Item onClick={signOut}>Sign out</Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             )}
           </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Main>
-        {/* The header hides the operator below xs; it still matters on a shared
-            station, so it reappears here. */}
-        {session !== null && (
-          <Text size="xs" c="dimmed" hiddenFrom="xs" mb="sm">
-            {session.user.displayName} · {session.user.station} · {session.user.storeId}
-          </Text>
-        )}
-        {/* Deliberately block flow rather than a flex Stack: a flex item defaults
-            to min-width:auto, so a page containing anything wide — the history
-            table, at 620px — would refuse to shrink and push the whole layout
-            past the viewport. */}
-        <AppNav />
-        <Box mt="lg">{children}</Box>
+        <Box className={classes.navRail}>
+          <Box className={classes.shell}>
+            <AppNav />
+          </Box>
+        </Box>
+
+        <Box className={classes.shell} py="xl">
+          {children}
+        </Box>
       </AppShell.Main>
     </AppShell>
   );
+}
+
+/** Two letters is enough to recognise yourself, and it needs no avatar upload. */
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((part) => part.length > 0)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }

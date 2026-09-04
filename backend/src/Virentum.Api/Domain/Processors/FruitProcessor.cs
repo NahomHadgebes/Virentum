@@ -1,31 +1,60 @@
+using System.Globalization;
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Models;
 
 namespace Virentum.Api.Domain.Processors;
 
 /// <summary>
-/// Shared evaluation for every fruit. A concrete processor supplies only the
-/// fruit it handles and its bands; selecting the band for a score is identical
-/// for all of them and lives here rather than being copied per fruit.
+/// Shared evaluation for every fruit. A concrete processor supplies only what is
+/// specific to it — its bands, the colours it can present, and what each colour
+/// means for it. Selecting a band and weighing the evidence is identical for all
+/// of them and lives here rather than being copied per fruit.
 ///
-/// The bands are validated on construction — that is, at startup, since
-/// processors are registered as singletons — so a fruit added with a gap or an
-/// overlap in its bands fails immediately instead of returning a wrong verdict
-/// for scores that fall in the hole.
+/// Bands are validated on construction, which is startup since processors are
+/// singletons, so a fruit added with a gap or an overlap fails immediately
+/// instead of returning a wrong verdict for scores that fall in the hole.
 /// </summary>
 public abstract class FruitProcessor : IFruitProcessor
 {
-    protected FruitProcessor(SupportedFruit fruit, IReadOnlyList<RipenessBand> bands)
+    /// <summary>
+    /// How much of the measured colour has to sit outside the fruit's profile
+    /// before the selection is worth questioning. Deliberately blunt: the check
+    /// exists to catch a picture of a different fruit or of cut flesh, not to
+    /// second-guess unusual lighting.
+    /// </summary>
+    /// Measured against a real photograph of a cut avocado, whose pale flesh
+    /// read 49% yellow: at 0.5 the check stayed silent on exactly the picture it
+    /// exists for.
+    private const double MismatchThreshold = 0.45;
+
+    /// <summary>
+    /// Below this share of the frame, the reading rests on too little of the
+    /// picture to stand on its own. A photograph that is mostly worktop or
+    /// packaging is not a measurement of produce.
+    /// </summary>
+    private const double MinimumAnalysedShare = 0.20;
+
+    private readonly IReadOnlyDictionary<string, string> _colourMeanings;
+
+    protected FruitProcessor(
+        SupportedFruit fruit,
+        IReadOnlyList<RipenessBand> bands,
+        ColourProfile colourProfile,
+        IReadOnlyDictionary<string, string> colourMeanings)
     {
         Fruit = fruit;
         Bands = Validate(fruit, bands);
+        ColourProfile = colourProfile;
+        _colourMeanings = colourMeanings;
     }
 
     public SupportedFruit Fruit { get; }
 
     public IReadOnlyList<RipenessBand> Bands { get; }
 
-    public RipenessAssessment Assess(VisionPrediction prediction)
+    public ColourProfile ColourProfile { get; }
+
+    public RipenessAssessment Assess(VisionPrediction prediction, Audience audience)
     {
         var ripenessPercent = ToPercent(prediction.RipenessScore);
         var band = Bands.First(candidate => ripenessPercent <= candidate.MaxPercent);
@@ -33,7 +62,92 @@ public abstract class FruitProcessor : IFruitProcessor
         return new RipenessAssessment(
             ripenessPercent,
             band.CommercialStatus,
-            band.DescribeFor(ripenessPercent));
+            band.Edibility,
+            band.StageName,
+            band.Appearance,
+            band.DescribeFor(ripenessPercent, audience),
+            DescribeFactors(prediction));
+    }
+
+    /// <summary>
+    /// What the measurement rested on, largest contribution first, in terms the
+    /// reader can check against their own photograph.
+    /// </summary>
+    private IReadOnlyList<AnalysisFactor> DescribeFactors(VisionPrediction prediction) =>
+        prediction.Tags
+            .Where(tag => ColourBuckets.All.Contains(tag.Key) && tag.Value > 0.005)
+            .OrderByDescending(tag => tag.Value)
+            .Select(tag => new AnalysisFactor(
+                ColourBuckets.Describe(tag.Key),
+                tag.Value,
+                _colourMeanings.TryGetValue(tag.Key, out var meaning) ? meaning : "no established meaning"))
+            .ToList();
+
+    public InspectionEvidence AssessEvidence(VisionPrediction prediction)
+    {
+        var concerns = new List<string>();
+
+        if (prediction.AnalysedShare is { } analysed && analysed < MinimumAnalysedShare)
+        {
+            var share = (analysed * 100d).ToString("F0", CultureInfo.InvariantCulture);
+            concerns.Add(
+                $"Only {share}% of the picture held produce-like colour; the rest read as " +
+                "background. Fill more of the frame with the fruit and try again.");
+        }
+
+        var mismatch = DescribeColourMismatch(prediction);
+        if (mismatch is not null)
+        {
+            concerns.Add(mismatch);
+        }
+
+        // How many photographs a reading pools is context, not a fault. Flagging
+        // every single-image scan as unreliable would cry wolf on the common
+        // case and drain the meaning out of the ones that are genuinely thin.
+
+        return InspectionEvidence.From(concerns);
+    }
+
+    /// <summary>
+    /// The imagery is dominated by a colour this fruit never takes, so either the
+    /// wrong fruit is selected or the photograph is not of the fruit's skin —
+    /// which is the surface the colour stage is a proxy for.
+    /// </summary>
+    private string? DescribeColourMismatch(VisionPrediction prediction)
+    {
+        // Only colour buckets are evidence here. A provider that reports
+        // something else says nothing about colour, and silence is the honest
+        // answer.
+        var measured = prediction.Tags
+            .Where(tag => ColourBuckets.All.Contains(tag.Key))
+            .ToList();
+
+        if (measured.Count == 0)
+        {
+            return null;
+        }
+
+        var offProfile = measured
+            .Where(tag => !ColourProfile.PlausibleBuckets.Contains(tag.Key))
+            .ToList();
+
+        if (offProfile.Count == 0)
+        {
+            return null;
+        }
+
+        var share = offProfile.Sum(tag => tag.Value);
+        if (share < MismatchThreshold)
+        {
+            return null;
+        }
+
+        var dominant = offProfile.OrderByDescending(tag => tag.Value).First();
+        var percent = (share * 100d).ToString("F0", CultureInfo.InvariantCulture);
+
+        return $"{percent}% of what we could see reads as {ColourBuckets.Describe(dominant.Key)}, " +
+               $"which carries no ripeness meaning for {Fruit}. Virentum reads the colour of a " +
+               "fruit's skin - check the selected fruit, and photograph the skin rather than cut flesh.";
     }
 
     /// <summary>A vision score is normalised [0, 1]; ripeness is a whole percent.</summary>

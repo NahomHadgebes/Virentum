@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Button, Container, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { Button, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { useDocumentTitle } from '@mantine/hooks';
 import { getHistory } from '../../api/inspection';
 import { useApiResource } from '../../api/useApiResource';
@@ -32,7 +32,6 @@ export function HistoryPage() {
   );
 
   return (
-    <Container size="md">
       <Stack gap="lg">
         <Group justify="space-between" align="flex-end" wrap="wrap">
           <div>
@@ -62,7 +61,6 @@ export function HistoryPage() {
 
         {!loading && error === null && data !== null && <Results total={data.length} visible={visible} />}
       </Stack>
-    </Container>
   );
 }
 

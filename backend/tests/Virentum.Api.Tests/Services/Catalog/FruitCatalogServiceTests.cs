@@ -1,14 +1,17 @@
 using Virentum.Api.Domain.Enums;
 using Virentum.Api.Domain.Processors;
 using Virentum.Api.Services.Catalog;
+using Virentum.Api.Tests.Support;
 using Xunit;
 
 namespace Virentum.Api.Tests.Services.Catalog;
 
 public sealed class FruitCatalogServiceTests
 {
+    // Deliberately reversed: the catalogue must order by the enum, not by the
+    // order the container happened to hand the processors over in.
     private static FruitCatalogService Catalog() =>
-        new(new IFruitProcessor[] { new AvocadoProcessor(), new BananaProcessor() });
+        new(RegisteredProcessors.All.AsEnumerable().Reverse());
 
     [Fact]
     public void Publishes_every_registered_fruit()
@@ -45,7 +48,10 @@ public sealed class FruitCatalogServiceTests
             Assert.Equal(banana.Bands[i].MinPercent, profile.Bands[i].MinPercent);
             Assert.Equal(banana.Bands[i].MaxPercent, profile.Bands[i].MaxPercent);
             Assert.Equal(banana.Bands[i].CommercialStatus, profile.Bands[i].CommercialStatus);
-            Assert.Equal(banana.Bands[i].Guidance, profile.Bands[i].GuidanceTemplate);
+            Assert.Equal(banana.Bands[i].BusinessGuidance, profile.Bands[i].BusinessGuidance);
+            Assert.Equal(banana.Bands[i].ConsumerGuidance, profile.Bands[i].ConsumerGuidance);
+            Assert.Equal(banana.Bands[i].StageName, profile.Bands[i].StageName);
+            Assert.Equal(banana.Bands[i].Edibility, profile.Bands[i].Edibility);
         }
     }
 
@@ -56,6 +62,36 @@ public sealed class FruitCatalogServiceTests
         {
             Assert.Equal(0, profile.Bands[0].MinPercent);
             Assert.Equal(100, profile.Bands[^1].MaxPercent);
+        }
+    }
+
+    /// <summary>
+    /// The guide is only useful if it can show what a stage looks like, so every
+    /// stage has to carry the pieces a reader checks against real fruit.
+    /// </summary>
+    [Fact]
+    public void Every_stage_carries_what_a_guide_needs_to_show_it()
+    {
+        foreach (var band in Catalog().GetProfiles().SelectMany(profile => profile.Bands))
+        {
+            Assert.False(string.IsNullOrWhiteSpace(band.StageName));
+            Assert.False(string.IsNullOrWhiteSpace(band.Appearance));
+            Assert.False(string.IsNullOrWhiteSpace(band.BusinessGuidance));
+            Assert.False(string.IsNullOrWhiteSpace(band.ConsumerGuidance));
+            Assert.Matches("^#[0-9a-fA-F]{6}$", band.SwatchHex);
+        }
+    }
+
+    /// <summary>
+    /// A shop and a shopper are answering different questions, so the two
+    /// sentences must not be the same sentence.
+    /// </summary>
+    [Fact]
+    public void Words_every_stage_differently_for_the_two_audiences()
+    {
+        foreach (var band in Catalog().GetProfiles().SelectMany(profile => profile.Bands))
+        {
+            Assert.NotEqual(band.BusinessGuidance, band.ConsumerGuidance);
         }
     }
 
