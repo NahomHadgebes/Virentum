@@ -184,6 +184,7 @@ connection string is read from `ConnectionStrings__Postgres` or Railway's
 | `ConnectionStrings__Postgres` or `DATABASE_URL` | The database |
 | `Jwt__Secret` | At least 32 characters, and not the development one |
 | `Cors__AllowedOrigins__0` | The Netlify origin, or the browser blocks every call |
+| `DemoAccount__StoreId` and `DemoAccount__Password` | The one account the instance seeds, so a visitor can sign in. Both are required and neither has a default — leave them unset and no account is created |
 
 **Then the frontend.** `netlify.toml` sets the build directory, the publish
 directory and the SPA redirect — without that redirect, opening `/guide`
@@ -205,11 +206,13 @@ site whose every request goes nowhere.
   to apply, so a fresh database gets no tables until the step above is run once
   and the result committed. A deployed API needs this before it can serve
   anything.
-- **A deployed API has no accounts.** The demo operator is seeded in
-  Development only, and there is no registration endpoint, so a Production
-  instance starts with an empty `Users` table and nobody can sign in. A public
-  demo needs a deliberate decision here — a seeded read-only account, or a
-  registration flow — rather than a development guard quietly removed.
+- **There is no registration endpoint.** An instance has exactly the accounts
+  it was configured to seed. That is deliberate for a demo, but it means
+  onboarding a second real operator is a database task, not a product feature.
+- **The demo account is not read-only.** Nothing in the API distinguishes it
+  from a real operator, so a visitor's scans are written to its history like
+  anyone else's. They are scoped to that store id and affect nothing else, but
+  the account is disposable rather than protected.
 - **Colour cannot grade a cut avocado.** Brown flesh and a brown stone read the
   same, and the avocado's ready band is wide, so a visibly spoiled one can still
   score inside it. `AzureCustomVisionService` is written and wired behind

@@ -35,6 +35,11 @@ public static class ServiceCollectionExtensions
         services.AddOptions<CorsOptions>()
             .Bind(configuration.GetSection(CorsOptions.SectionName));
 
+        // Not validated: every field is optional by design, and an unset
+        // section is the normal state for an instance with no demo account.
+        services.AddOptions<DemoAccountOptions>()
+            .Bind(configuration.GetSection(DemoAccountOptions.SectionName));
+
         return services;
     }
 
